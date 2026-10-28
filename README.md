@@ -1,18 +1,16 @@
-# DeepThink
+# Think My Day
 
-Jonas 个人用的 macOS 本地活动复盘底座。v1 只做**采集与存储**：签名 Swift 边沿记录器 + Python 幂等摄入 + 单机 SQLite。无截图、无击键、无剪贴板、无网络、无 iCloud。
+Jonas 个人用的 macOS 菜单栏 App：本机读取你正在看的窗口文字，推断你在做什么、做了什么、什么时候跑偏，晚上给出当天复盘。可以理解为「本机版 Littlebird + ADHD 复盘」。
 
-复盘界面与 LLM 摘要不在本期范围，但库里的数据必须够支撑日后复盘。
+产品需求见 [docs/PRD-采集与存储.md](docs/PRD-采集与存储.md)（PRD v0.2，草案，2026-10-28）。
 
-产品需求见 [docs/PRD-采集与存储.md](docs/PRD-采集与存储.md)（PRD v0.1，草案，2026-10-28）。
+## 要点
 
-## 范围
-
-- 记录操作系统会忘掉的信号：前台焦点、窗口标题（受敏感 App 约束）、AFK（180 秒）、睡眠 / 唤醒 / 锁屏。
-- 按游标幂等摄入已有磁盘日志：Claude Code JSONL、Codex rollout、Chrome History（多 Profile，不含无痕）。
-- 可选读取 Biome `App.InFocus`（仅 `local/`）做双见证，缺口写入 `witness_gaps`。
-- 写入前脱敏。每台 Mac 一份 SQLite WAL，`device_id` 区分机器，不同步。
+- 主信号：辅助功能读取窗口文字（读不到再对单个窗口做本机文字识别）、焦点切换路径、焦点输入框字数增减、Chrome 当前标签。Claude / Codex 日志只作辅助。
+- 每个 App 三档：完整读取 / 只记标题 / 完全排除，可在设置里逐个修改。
+- 本机 SQLite，库加密、密钥在钥匙串，原始屏幕文字默认保留 30 天；写入前脱敏。
+- 云端模型做一天的完整理解，发送内容由用户控制，复盘页常驻显示今天发过什么。
 
 ## 明确不做
 
-周期截图、OCR、击键、剪贴板、iPhone、iCloud、Mac App Store、Chrome 扩展实时 URL、复盘 UI、LLM 日摘要。
+周期全屏截图与录屏、击键监听、剪贴板监听、iPhone、iCloud、Mac App Store。
