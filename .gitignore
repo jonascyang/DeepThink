@@ -1,7 +1,8 @@
+*.xcodeproj
 .DS_Store
 .build/
 .swiftpm/
 DerivedData/
 build/
-*.xcodeproj
+signing-local/
 xcuserdata/
