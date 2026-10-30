@@ -34,7 +34,7 @@ extendedKeyUsage = critical,codeSigning
 EOF
 
 $OPENSSL req -x509 -newkey rsa:2048 -nodes -days 3650 -config cert.cnf -keyout key.pem -out cert.pem
-P12_PASS=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+P12_PASS=$($OPENSSL rand -hex 12)
 $OPENSSL pkcs12 -export -inkey key.pem -in cert.pem -name "$NAME" -out cert.p12 -passout "pass:$P12_PASS"
 
 security import cert.p12 -k "$KEYCHAIN" -P "$P12_PASS" -T /usr/bin/codesign

@@ -11,6 +11,7 @@ final class OCRProbe {
 
     static let perWindowInterval: TimeInterval = 30
     static let globalInterval: TimeInterval = 5
+    static let timeout: TimeInterval = 10
 
     func request(window: CGWin, bundle: String, reason: String, axVisibleChars: Int) {
         lock.lock()
@@ -27,7 +28,19 @@ final class OCRProbe {
         guard allowed else { return }
 
         Task.detached(priority: .utility) {
-            let rec = await Self.run(window: window, bundle: bundle, reason: reason, axVisibleChars: axVisibleChars)
+            // A hung ScreenCaptureKit call must not block every later OCR request.
+            let rec = await withTaskGroup(of: OCRRec.self) { group in
+                group.addTask { await Self.run(window: window, bundle: bundle, reason: reason, axVisibleChars: axVisibleChars) }
+                group.addTask {
+                    try? await Task.sleep(nanoseconds: UInt64(Self.timeout * 1_000_000_000))
+                    return OCRRec(ts: Date().timeIntervalSince1970, reason: reason, bundleId: bundle, ok: false, error: "timeout",
+                                  captureMs: Self.timeout * 1000, ocrMs: 0, ocrChars: 0, axVisibleChars: axVisibleChars,
+                                  meanConfidence: 0, pixels: 0)
+                }
+                let first = await group.next()!
+                group.cancelAll()
+                return first
+            }
             RecordStore.shared.append(rec)
             self.lock.withLock { self.running = false }
         }
