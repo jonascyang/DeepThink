@@ -5,7 +5,7 @@ import Testing
 private func tempStore() throws -> RecordStore {
     try RecordStore(url: FileManager.default.temporaryDirectory
         .appendingPathComponent("tmd-tests-\(UUID().uuidString)", isDirectory: true)
-        .appendingPathComponent("thinkmyday.sqlite"))
+        .appendingPathComponent("thinkmyday.sqlite"), keys: testKeys)
 }
 
 /// A wall-clock time in a given zone.

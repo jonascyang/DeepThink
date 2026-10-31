@@ -1,8 +1,13 @@
+import CryptoKit
 import Foundation
 import Testing
 @testable import ThinkMyDayCore
 
-private func tempURL() -> URL {
+/// One in-memory key for every test, so tests never touch the user's Keychain. It exists from the start:
+/// tests run in parallel, and two stores creating a key at once would overwrite each other's.
+let testKeys = InMemoryKeyStore(key: SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) })
+
+func tempURL() -> URL {
     FileManager.default.temporaryDirectory
         .appendingPathComponent("tmd-tests-\(UUID().uuidString)", isDirectory: true)
         .appendingPathComponent("thinkmyday.sqlite")
@@ -16,12 +21,12 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
     let day = ReviewDay(startedAt: Date(timeIntervalSince1970: 1_793_400_000), plannedStart: Date(timeIntervalSince1970: 1_793_396_400))
 
     @Test func newDatabaseIsAtCurrentSchema() async throws {
-        let store = try RecordStore(url: tempURL())
+        let store = try RecordStore(url: tempURL(), keys: testKeys)
         #expect(try await store.schemaVersion == Schema.currentVersion)
     }
 
     @Test func writesAndReadsDaysAndRecords() async throws {
-        let store = try RecordStore(url: tempURL())
+        let store = try RecordStore(url: tempURL(), keys: testKeys)
         try await store.append(.dayStarted(day))
         #expect(try await store.openDay() == day)
 
@@ -40,17 +45,17 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
     @Test func dataSurvivesReopening() async throws {
         let url = tempURL()
         do {
-            let store = try RecordStore(url: url)
+            let store = try RecordStore(url: url, keys: testKeys)
             try await store.append(.dayStarted(day))
             try await store.append(.recordCaptured(record(day, 1)))
         }
-        let reopened = try RecordStore(url: url)
+        let reopened = try RecordStore(url: url, keys: testKeys)
         #expect(try await reopened.records(dayID: day.id).count == 1)
         #expect(try await reopened.openDay()?.id == day.id)
     }
 
     @Test func invalidEventWritesNothing() async throws {
-        let store = try RecordStore(url: tempURL())
+        let store = try RecordStore(url: tempURL(), keys: testKeys)
         let orphan = Record(dayID: UUID(), at: Date(), kind: "windowText", body: Data())
         await #expect(throws: StoreError.dayNotFound(orphan.dayID)) { try await store.append(.recordCaptured(orphan)) }
         await #expect(throws: StoreError.dayNotFound(day.id)) { try await store.append(.dayEnded(dayID: day.id, at: Date())) }
@@ -63,7 +68,7 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
     }
 
     @Test func projectionsRebuildFromEvents() async throws {
-        let store = try RecordStore(url: tempURL())
+        let store = try RecordStore(url: tempURL(), keys: testKeys)
         try await store.append(.dayStarted(day))
         for i in 0..<50 { try await store.append(.recordCaptured(record(day, Double(i), "line \(i)"))) }
         let before = try await store.records(dayID: day.id)
@@ -77,7 +82,7 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
     @Test func reopeningCatchesUpProjectionsThatFellBehind() async throws {
         let url = tempURL()
         do {
-            let store = try RecordStore(url: url)
+            let store = try RecordStore(url: url, keys: testKeys)
             try await store.append(.dayStarted(day))
             try await store.append(.recordCaptured(record(day, 1)))
         }
@@ -85,7 +90,7 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
         let raw = try SQLiteConnection(path: url.path)
         try raw.execute("DELETE FROM records; DELETE FROM review_days; DELETE FROM cursors")
 
-        let reopened = try RecordStore(url: url)
+        let reopened = try RecordStore(url: url, keys: testKeys)
         #expect(try await reopened.records(dayID: day.id).count == 1)
         #expect(try await reopened.verify().isEmpty)
     }
@@ -114,7 +119,7 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         let db = try SQLiteConnection(path: url.path)
         try db.execute("PRAGMA user_version = 99")
-        #expect(throws: StoreError.newerSchema(found: 99, supported: Schema.currentVersion)) { try RecordStore(url: url) }
+        #expect(throws: StoreError.newerSchema(found: 99, supported: Schema.currentVersion)) { try RecordStore(url: url, keys: testKeys) }
     }
 
     @Test func failedMigrationLeavesVersionUnchanged() throws {

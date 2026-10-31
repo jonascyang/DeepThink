@@ -58,4 +58,12 @@ public enum StoreError: Error, Equatable, Sendable {
     case unknownEventKind(String)
     case dayNotFound(UUID)
     case dayAlreadyEnded(UUID)
+    /// The day is being recorded; end it before deleting it.
+    case dayIsOpen(UUID)
+    /// The database holds encrypted data but the Keychain has no key for it.
+    case keyMissing
+    /// The key does not decrypt the data.
+    case wrongKey
+    case encryptionFailed
+    case keychain(OSStatus)
 }

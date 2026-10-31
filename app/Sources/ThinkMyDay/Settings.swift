@@ -19,6 +19,14 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: idleKey) }
     }
 
+    private static let retentionKey = "retentionDays"
+
+    /// Days to keep raw records: 7, 30 (default) or 0 for never delete (PRD §10).
+    static var retentionDays: Int {
+        get { UserDefaults.standard.object(forKey: retentionKey) as? Int ?? 30 }
+        set { UserDefaults.standard.set(newValue, forKey: retentionKey) }
+    }
+
     static var captureOptions: Capturer.Options {
         Capturer.Options(ocrEnabled: ocrEnabled, idleThreshold: TimeInterval(idleMinutes * 60))
     }

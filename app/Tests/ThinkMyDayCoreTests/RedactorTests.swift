@@ -119,7 +119,7 @@ enum Secrets {
     @Test func storeFilesHoldNoSecret() async throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tmd-tests-\(UUID().uuidString)", isDirectory: true)
         let url = dir.appendingPathComponent("thinkmyday.sqlite")
-        let store = try RecordStore(url: url)
+        let store = try RecordStore(url: url, keys: testKeys)
         let (day, _) = try await store.startDay(at: Date(), plannedStart: nil)
         for (i, secret) in Secrets.all.enumerated() {
             let body = WindowText(windowID: UInt32(i), bundleID: "test", appName: "test", title: secret, focused: true,

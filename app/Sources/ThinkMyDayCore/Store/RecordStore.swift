@@ -2,12 +2,16 @@ import Foundation
 
 /// The single local database. Writes append an event and update the projections in one transaction,
 /// so a crash leaves either both or neither; `replay()` catches projections up if they ever fall behind.
+///
+/// Every payload (event JSON, record body) is encrypted with a key from `keys` (the Keychain in the app);
+/// times, kinds and day ids stay readable so the database can be queried and cleaned up (ADR 0003).
 public actor RecordStore {
     public let url: URL
     private let db: SQLiteConnection
+    private let cipher: PayloadCipher
     private static let projection = "main"
 
-    public init(url: URL) throws {
+    public init(url: URL, keys: KeyStore = KeychainKeyStore()) throws {
         self.url = url
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         db = try SQLiteConnection(path: url.path)
@@ -15,8 +19,14 @@ public actor RecordStore {
         // FULL: a committed record survives power loss, not only a process crash.
         try db.execute("PRAGMA synchronous = FULL")
         try db.execute("PRAGMA foreign_keys = ON")
+        // Deleted rows are overwritten with zeros instead of lingering in free pages.
+        try db.execute("PRAGMA secure_delete = ON")
         try Schema.migrate(db)
-        try Self.catchUp(db)
+        let hasSealed = !(try db.query("SELECT 1 FROM events WHERE substr(payload, 1, ?) = ? LIMIT 1",
+                                       [.int(Int64(PayloadCipher.marker.count)), .blob(PayloadCipher.marker)]).isEmpty)
+        cipher = try PayloadCipher.load(from: keys, databaseHasSealedData: hasSealed)
+        try Self.sealLegacyRows(db, cipher)
+        try Self.catchUp(db, cipher)
     }
 
     /// Default location: ~/Library/Application Support/ThinkMyDay/thinkmyday.sqlite, or $TMD_DATA_DIR for development.
@@ -73,14 +83,57 @@ public actor RecordStore {
     }
 
     /// Applies any events the projections have not seen yet.
-    public func replay() throws { try Self.catchUp(db) }
+    public func replay() throws { try Self.catchUp(db, cipher) }
 
     /// Drops the projections and rebuilds them from the event log.
     public func rebuildProjections() throws {
         try db.transaction {
             try db.execute("DELETE FROM records; DELETE FROM review_days; DELETE FROM cursors")
         }
-        try Self.catchUp(db)
+        try Self.catchUp(db, cipher)
+    }
+
+    // MARK: - Retention and deletion
+
+    /// Deletes raw records captured before `cutoff` (保留期限). 复盘日 themselves are kept.
+    /// Returns how many records were removed.
+    @discardableResult
+    public func purgeRecords(before cutoff: Date) throws -> Int {
+        let count = try db.transaction { () -> Int in
+            let n = Int(try db.query("SELECT count(*) FROM records WHERE at < ?", [.double(cutoff.timeIntervalSince1970)]).first?.first?.int ?? 0)
+            try db.run("DELETE FROM records WHERE at < ?", [.double(cutoff.timeIntervalSince1970)])
+            try db.run("DELETE FROM events WHERE kind = 'recordCaptured' AND at < ?", [.double(cutoff.timeIntervalSince1970)])
+            return n
+        }
+        if count > 0 { try flushWAL() }
+        return count
+    }
+
+    /// 删除某一天: removes the day's raw records. With `entireDay`, the 复盘日 itself goes too
+    /// (later also its 事情 and 对话, once they exist). The day being recorded cannot be deleted.
+    public func deleteDay(_ dayID: UUID, entireDay: Bool) throws {
+        guard try openDay()?.id != dayID else { throw StoreError.dayIsOpen(dayID) }
+        try db.transaction {
+            try db.run("DELETE FROM records WHERE day_id = ?", [.text(dayID.uuidString)])
+            if entireDay {
+                try db.run("DELETE FROM review_days WHERE id = ?", [.text(dayID.uuidString)])
+                try db.run("DELETE FROM events WHERE day_id = ?", [.text(dayID.uuidString)])
+            } else {
+                try db.run("DELETE FROM events WHERE day_id = ? AND kind = 'recordCaptured'", [.text(dayID.uuidString)])
+            }
+        }
+        try flushWAL()
+    }
+
+    /// A consistent copy of the whole database (`VACUUM INTO`). It stays encrypted with the same Keychain key.
+    public func backup(to destination: URL) throws {
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try db.run("VACUUM INTO ?", [.text(destination.path)])
+    }
+
+    /// Moves the WAL into the database and empties it, so deleted content does not survive in the log.
+    private func flushWAL() throws {
+        _ = try db.query("PRAGMA wal_checkpoint(TRUNCATE)")
     }
 
     // MARK: - Reading
@@ -99,7 +152,7 @@ public actor RecordStore {
         try db.query("SELECT id, day_id, at, kind, body FROM records WHERE day_id = ? ORDER BY at, rowid", [.text(dayID.uuidString)])
             .map { r in
                 Record(id: UUID(uuidString: r[0].text ?? "") ?? UUID(), dayID: UUID(uuidString: r[1].text ?? "") ?? UUID(),
-                       at: Date(timeIntervalSince1970: r[2].double ?? 0), kind: r[3].text ?? "", body: r[4].blob ?? Data())
+                       at: Date(timeIntervalSince1970: r[2].double ?? 0), kind: r[3].text ?? "", body: try cipher.open(r[4].blob ?? Data()))
             }
     }
 
@@ -129,27 +182,40 @@ public actor RecordStore {
         var event = event
         if case .recordCaptured(let record) = event { event = .recordCaptured(try record.redacted()) }
         try db.run("INSERT INTO events (at, day_id, kind, payload) VALUES (?, ?, ?, ?)",
-                   [.double(event.at.timeIntervalSince1970), .text(event.dayID.uuidString), .text(event.kind), .blob(try event.payload())])
+                   [.double(event.at.timeIntervalSince1970), .text(event.dayID.uuidString), .text(event.kind), .blob(try cipher.seal(try event.payload()))])
         let id = db.lastInsertRowID
-        try Self.apply(event, id: id, db)
+        try Self.apply(event, id: id, db, cipher)
         try Self.setCursor(id, db)
         return id
     }
 
-    private static func catchUp(_ db: SQLiteConnection) throws {
+    /// Encrypts payloads written by a build before ADR 0003.
+    private static func sealLegacyRows(_ db: SQLiteConnection, _ cipher: PayloadCipher) throws {
+        let marker: [SQLValue] = [.int(Int64(PayloadCipher.marker.count)), .blob(PayloadCipher.marker)]
+        let events = try db.query("SELECT id, payload FROM events WHERE substr(payload, 1, ?) != ?", marker)
+        let records = try db.query("SELECT rowid, body FROM records WHERE substr(body, 1, ?) != ?", marker)
+        guard !events.isEmpty || !records.isEmpty else { return }
+        try db.transaction {
+            for row in events { try db.run("UPDATE events SET payload = ? WHERE id = ?", [.blob(try cipher.seal(row[1].blob ?? Data())), row[0]]) }
+            for row in records { try db.run("UPDATE records SET body = ? WHERE rowid = ?", [.blob(try cipher.seal(row[1].blob ?? Data())), row[0]]) }
+        }
+        _ = try db.query("PRAGMA wal_checkpoint(TRUNCATE)")
+    }
+
+    private static func catchUp(_ db: SQLiteConnection, _ cipher: PayloadCipher) throws {
         let cursor = try db.query("SELECT event_id FROM cursors WHERE name = ?", [.text(projection)]).first?.first?.int ?? 0
         let pending = try db.query("SELECT id, kind, payload FROM events WHERE id > ? ORDER BY id", [.int(cursor)])
         guard !pending.isEmpty else { return }
         try db.transaction {
             for row in pending {
                 let id = row[0].int ?? 0
-                try apply(try Event(kind: row[1].text ?? "", payload: row[2].blob ?? Data()), id: id, db)
+                try apply(try Event(kind: row[1].text ?? "", payload: try cipher.open(row[2].blob ?? Data())), id: id, db, cipher)
                 try setCursor(id, db)
             }
         }
     }
 
-    private static func apply(_ event: Event, id: Int64, _ db: SQLiteConnection) throws {
+    private static func apply(_ event: Event, id: Int64, _ db: SQLiteConnection, _ cipher: PayloadCipher) throws {
         switch event {
         case .dayStarted(let day):
             try db.run("INSERT INTO review_days (id, started_at, ended_at, planned_start) VALUES (?, ?, ?, ?)",
@@ -168,7 +234,7 @@ public actor RecordStore {
             guard row[0] == .null else { throw StoreError.dayAlreadyEnded(r.dayID) }
             try db.run("INSERT INTO records (id, day_id, at, kind, body, event_id) VALUES (?, ?, ?, ?, ?, ?)",
                        [.text(r.id.uuidString), .text(r.dayID.uuidString), .double(r.at.timeIntervalSince1970),
-                        .text(r.kind), .blob(r.body), .int(id)])
+                        .text(r.kind), .blob(try cipher.seal(r.body)), .int(id)])
         }
     }
 

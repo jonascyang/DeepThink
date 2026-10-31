@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var openDay: ReviewDay?
     private var lastDay: ReviewDay?
     private var statusTimer: Timer?
+    private var purgeTimer: Timer?
     private var capturer: Capturer?
     private var triggers: CaptureTriggers?
 
@@ -28,7 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.capturer = capturer
             triggers = CaptureTriggers(capturer: capturer)
         } catch {
-            storeError = "\(error)"
+            storeError = Self.describe(error)
             log.error("store failed to open: \(error, privacy: .public)")
         }
         log.notice("launched; accessibility \(Permissions.accessibility().label, privacy: .public), screen recording \(Permissions.screenRecording().label, privacy: .public)")
@@ -42,7 +43,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if Permissions.screenRecording() != .granted { Permissions.requestScreenRecording() }
         refreshChrome(ask: false)
 
-        Task { await reloadDays() }
+        Task {
+            await reloadDays()
+            await purgeExpired()
+        }
+        purgeTimer = Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { _ in
+            Task { @MainActor in await self.purgeExpired() }
+        }
         // The ✓ of an ended day turns back into ○ when the calendar day changes.
         statusTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in
             Task { @MainActor in self.updateIcon() }
@@ -132,6 +139,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    // MARK: - Retention and backup
+
+    /// Deletes raw records older than the chosen retention period.
+    private func purgeExpired() async {
+        guard let store, Settings.retentionDays > 0 else { return }
+        let cutoff = Date().addingTimeInterval(-Double(Settings.retentionDays) * 86_400)
+        do {
+            let removed = try await store.purgeRecords(before: cutoff)
+            if removed > 0 { log.notice("purged \(removed) records older than \(Settings.retentionDays) days") }
+        } catch {
+            log.error("purge failed: \(error, privacy: .public)")
+        }
+    }
+
+    @objc private func setRetention(_ sender: NSMenuItem) {
+        Settings.retentionDays = sender.tag
+        Task { await purgeExpired() }
+    }
+
+    @objc private func backup() {
+        guard let store else { return }
+        let stamp = Date().formatted(.iso8601.year().month().day().dateSeparator(.omitted).time(includingFractionalSeconds: false).timeSeparator(.omitted))
+        let url = RecordStore.defaultURL().deletingLastPathComponent()
+            .appendingPathComponent("backups", isDirectory: true).appendingPathComponent("thinkmyday-\(stamp).sqlite")
+        Task {
+            do {
+                try await store.backup(to: url)
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            } catch {
+                let alert = NSAlert()
+                alert.messageText = "备份失败"
+                alert.informativeText = Self.describe(error)
+                alert.runModal()
+            }
+        }
+    }
+
+    static func describe(_ error: Error) -> String {
+        switch error as? StoreError {
+        case .keyMissing: "钥匙串里找不到记录库的密钥，已有的记录无法解密。"
+        case .wrongKey: "钥匙串里的密钥打不开这个记录库。"
+        case .keychain(let status): "读取钥匙串失败（\(status)）。"
+        case .newerSchema: "记录库来自更新版本的 Think My Day，请升级后再打开。"
+        default: "\(error)"
+        }
+    }
+
     // MARK: - Menu
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -187,6 +241,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let idle = NSMenuItem(title: "多久没有输入算作无输入", action: nil, keyEquivalent: "")
         idle.submenu = idleMenu
         menu.addItem(idle)
+
+        let retentionMenu = NSMenu()
+        for (days, title) in [(7, "7 天"), (30, "30 天"), (0, "永不清除")] {
+            let item = NSMenuItem(title: title, action: #selector(setRetention(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = days
+            item.state = Settings.retentionDays == days ? .on : .off
+            retentionMenu.addItem(item)
+        }
+        let retention = NSMenuItem(title: "原始记录保留", action: nil, keyEquivalent: "")
+        retention.submenu = retentionMenu
+        menu.addItem(retention)
+        let backupItem = NSMenuItem(title: "备份记录库", action: #selector(backup), keyEquivalent: "")
+        backupItem.target = self
+        backupItem.isEnabled = store != nil
+        menu.addItem(backupItem)
 
         let login = NSMenuItem(title: "开机自动启动", action: #selector(toggleLoginItem), keyEquivalent: "")
         login.target = self

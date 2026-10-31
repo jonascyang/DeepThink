@@ -15,7 +15,14 @@ let url = URL(fileURLWithPath: args[2])
 /// Each record body repeats its own sequence number, so a torn write would show up as a mismatch.
 func body(_ n: Int) -> Data { Data(String(repeating: "\(n)|", count: 200).utf8) }
 
-let store = try RecordStore(url: url)
+/// The key sits next to the database so every process in the crash test opens it, without touching the Keychain.
+struct FileKeyStore: KeyStore {
+    let file: URL
+    func load() throws -> Data? { try? Data(contentsOf: file) }
+    func save(_ key: Data) throws { try key.write(to: file) }
+}
+
+let store = try RecordStore(url: url, keys: FileKeyStore(file: url.appendingPathExtension("key")))
 switch args[1] {
 case "write":
     let day: ReviewDay
