@@ -39,7 +39,10 @@ case "dump":
             let app = json["bundleID"] as? String ?? "-"
             let title = (json["title"] as? String).map { $0.isEmpty ? "empty" : "title" } ?? "no-title"
             let lines = (json["added"] as? [Any])?.count ?? 0
-            let extra = [json["reason"], json["hidden"], json["state"]].compactMap { $0 as? String }.joined(separator: ",")
+            var extra = [json["reason"], json["hidden"], json["state"]].compactMap { $0 as? String }.joined(separator: ",")
+            if let windows = json["windows"] as? [[String: Any]], let screens = json["screens"] as? [Any] {
+                extra = "screens \(screens.count) windows \(windows.count) on " + windows.map { "\($0["screen"] ?? "?")" }.joined(separator: "/")
+            }
             print(record.kind, app, title, lines, extra)
         }
     }

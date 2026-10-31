@@ -37,6 +37,13 @@ final class CaptureTriggers {
             workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.capturer.presence(.awake) }
             },
+            // The display can sleep while the Mac stays awake; accessibility then sees no windows at all (M0b).
+            workspace.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.capturer.presence(.asleep) }
+            },
+            workspace.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.capturer.presence(.awake) }
+            },
             DistributedNotificationCenter.default().addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.capturer.presence(.locked) }
             },

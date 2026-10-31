@@ -6,6 +6,7 @@ public enum RecordKind: String, Sendable {
     case focus
     case gap
     case presence
+    case layout
 }
 
 public enum ReadMethod: String, Codable, Sendable {
@@ -81,6 +82,8 @@ public struct Gap: Codable, Sendable, Equatable {
         case blocked
         /// A window that is never read: incognito, or a browser extension page such as a wallet.
         case neverRead
+        /// The window is on screen but its app's accessibility tree has no matching window.
+        case noAccessibilityWindow
     }
 
     public var reason: Reason

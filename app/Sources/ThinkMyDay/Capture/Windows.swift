@@ -58,20 +58,55 @@ enum Windows {
         return Double(visible) / Double(n * n)
     }
 
-    /// Maps CG window ids to AX window elements; falls back to frame matching when the id lookup fails.
-    static func axWindows(pid: pid_t, screenWindows: [ScreenWindow]) -> [CGWindowID: AXUIElement] {
+    struct Match {
+        var windows: [CGWindowID: AXUIElement] = [:]
+        var byID = 0
+        var byFrame = 0
+        var byElimination = 0
+    }
+
+    /// Maps CG window ids to AX window elements: by window id, then by frame (±2 pt), then, when exactly one
+    /// window is left on each side, by elimination. Looks at AXWindows and at window-role children of the app.
+    static func axWindows(pid: pid_t, screenWindows: [ScreenWindow]) -> Match {
         let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 0.3)
-        guard let list = AX.attr(app, kAXWindowsAttribute) as? [AXUIElement] else { return [:] }
-        var map: [CGWindowID: AXUIElement] = [:]
-        for el in list {
-            if let id = AX.windowID(el) {
-                map[id] = el
-            } else if let f = AX.frame(el), let match = screenWindows.first(where: { $0.bounds.equalTo(f) && map[$0.id] == nil }) {
-                map[match.id] = el
+        var elements = AX.attr(app, kAXWindowsAttribute) as? [AXUIElement] ?? []
+        for child in AX.attr(app, kAXChildrenAttribute) as? [AXUIElement] ?? []
+        where (AX.attr(child, kAXRoleAttribute) as? String) == kAXWindowRole && !elements.contains(where: { CFEqual($0, child) }) {
+            elements.append(child)
+        }
+
+        var match = Match()
+        var leftover: [AXUIElement] = []
+        for el in elements {
+            if let id = AX.windowID(el), screenWindows.contains(where: { $0.id == id }) {
+                match.windows[id] = el
+                match.byID += 1
+            } else {
+                leftover.append(el)
             }
         }
-        return map
+        var unmatched = leftover
+        leftover = []
+        for el in unmatched {
+            if let f = AX.frame(el), let w = screenWindows.first(where: { match.windows[$0.id] == nil && close($0.bounds, f) }) {
+                match.windows[w.id] = el
+                match.byFrame += 1
+            } else {
+                leftover.append(el)
+            }
+        }
+        unmatched = leftover
+        let open = screenWindows.filter { match.windows[$0.id] == nil }
+        if open.count == 1, unmatched.count == 1 {
+            match.windows[open[0].id] = unmatched[0]
+            match.byElimination += 1
+        }
+        return match
+    }
+
+    private static func close(_ a: CGRect, _ b: CGRect) -> Bool {
+        abs(a.minX - b.minX) <= 2 && abs(a.minY - b.minY) <= 2 && abs(a.width - b.width) <= 2 && abs(a.height - b.height) <= 2
     }
 
     /// The focused window of the frontmost app.

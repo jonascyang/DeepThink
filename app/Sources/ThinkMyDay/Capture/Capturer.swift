@@ -25,6 +25,8 @@ final class Capturer: @unchecked Sendable {
     private var unreadable: Set<CGWindowID> = []
     /// Windows currently left unread, so the placeholder is written once per stretch, not every sample.
     private var hidden: [CGWindowID: Gap.Reason] = [:]
+    private var unmatched: Set<CGWindowID> = []
+    private var layouts = LayoutTracker()
     private var flagged: Set<pid_t> = []
     private var lastFocus: Focus?
     private var trusted: Bool?
@@ -61,6 +63,8 @@ final class Capturer: @unchecked Sendable {
             self.lastFocus = nil
             self.unreadable = []
             self.hidden = [:]
+            self.unmatched = []
+            self.layouts.reset()
             self.trusted = nil
         }
         trigger()
@@ -147,19 +151,35 @@ final class Capturer: @unchecked Sendable {
             }
         }
 
+        let screens = Windows.screenRects()
+        var layout = Layout(screens: screens, windows: [])
+        var matchStats = Windows.Match()
+        defer {
+            if layouts.changed(layout) { write(.layout, layout) }
+            if matchStats.windows.count < layout.windows.filter({ $0.hidden == nil }).count {
+                log.debug("matched \(matchStats.byID) by id, \(matchStats.byFrame) by frame, \(matchStats.byElimination) by elimination; unmatched \(self.unmatched.count)")
+            }
+        }
+
         var axByPid: [pid_t: [CGWindowID: AXUIElement]] = [:]
         for w in windows {
             let app = NSRunningApplication(processIdentifier: w.pid)
             let bundleID = app?.bundleIdentifier ?? "unknown"
             if Windows.systemOverlays.contains(bundleID) { continue }
             let tab = tab(bundleID, w.bounds)
+            let decision = decide(bundleID, tab)
+            let hiddenReason: Gap.Reason? = switch decision {
+            case .read: nil
+            case .blocked: .blocked
+            case .neverRead: .neverRead
+            }
+            layout.windows.append(Layout.Window(
+                windowID: w.id, bundleID: hiddenReason == nil ? bundleID : "", appName: hiddenReason == nil ? (app?.localizedName ?? w.owner) : "",
+                frame: w.bounds, screen: Layout.screen(for: w.bounds, in: screens), visible: Layout.roundedVisible(w.visibleFraction),
+                focused: w.id == focused?.id, hidden: hiddenReason))
 
             // 不看名单 and never-read windows: one placeholder, no title, no text, no accessibility call at all.
-            switch decide(bundleID, tab) {
-            case .read:
-                hidden[w.id] = nil
-            case let decision:
-                let reason: Gap.Reason = decision == .blocked ? .blocked : .neverRead
+            if let reason = hiddenReason {
                 if hidden[w.id] != reason {
                     hidden[w.id] = reason
                     history.forget(window: w.id)
@@ -167,16 +187,28 @@ final class Capturer: @unchecked Sendable {
                 }
                 continue
             }
+            hidden[w.id] = nil
 
             if !flagged.contains(w.pid) {
                 flagged.insert(w.pid)
                 Windows.enableAccessibility(pid: w.pid, bundleID: bundleID, bundleURL: app?.bundleURL)
             }
             if axByPid[w.pid] == nil {
-                axByPid[w.pid] = Windows.axWindows(pid: w.pid, screenWindows: windows.filter { $0.pid == w.pid })
+                let match = Windows.axWindows(pid: w.pid, screenWindows: windows.filter { $0.pid == w.pid })
+                axByPid[w.pid] = match.windows
+                matchStats.byID += match.byID
+                matchStats.byFrame += match.byFrame
+                matchStats.byElimination += match.byElimination
+                matchStats.windows.merge(match.windows) { a, _ in a }
             }
-            // Windows without a matching accessibility window are handled by the multi-window issue (#7).
-            guard let axWindow = axByPid[w.pid]?[w.id] else { continue }
+            // On screen but not in the app's accessibility tree: keep the hole visible instead of dropping the window.
+            guard let axWindow = axByPid[w.pid]?[w.id] else {
+                if unmatched.insert(w.id).inserted {
+                    write(.gap, Gap(reason: .noAccessibilityWindow, bundleID: bundleID, appName: app?.localizedName ?? w.owner, windowID: w.id))
+                }
+                continue
+            }
+            unmatched.remove(w.id)
 
             let title = tab?.title ?? (AX.attr(axWindow, kAXTitleAttribute) as? String)
             let read = AXWalker.read(window: axWindow, windowFrame: w.bounds)

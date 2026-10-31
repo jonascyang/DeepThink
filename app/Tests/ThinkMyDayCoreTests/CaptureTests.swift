@@ -171,3 +171,56 @@ private func group(_ children: [ElementSnapshot], role: String = "AXGroup", fram
         #expect(try record.decode(Focus.self).hidden == .blocked)
     }
 }
+
+@Suite struct LayoutTests {
+    let screens = [CGRect(x: 0, y: 0, width: 1512, height: 982), CGRect(x: 1512, y: -200, width: 2560, height: 1440)]
+
+    private func window(_ id: UInt32, _ frame: CGRect, visible: Double = 1) -> Layout.Window {
+        Layout.Window(windowID: id, bundleID: "app.\(id)", appName: "App \(id)", frame: frame,
+                      screen: Layout.screen(for: frame, in: screens), visible: visible, focused: id == 1)
+    }
+
+    @Test func sideBySideWindowsOnTwoScreens() {
+        let left = window(1, CGRect(x: 0, y: 30, width: 756, height: 950))
+        let right = window(2, CGRect(x: 756, y: 30, width: 756, height: 950))
+        let external = window(3, CGRect(x: 1600, y: 0, width: 1200, height: 900))
+        #expect([left, right, external].map(\.screen) == [0, 0, 1])
+        #expect(Layout.screen(for: CGRect(x: -2000, y: 0, width: 100, height: 100), in: screens) == -1)
+    }
+
+    @Test func recordsOnlyRealChanges() {
+        let tracker = TrackerBox()
+        let a = window(1, CGRect(x: 0, y: 30, width: 756, height: 950)), b = window(2, CGRect(x: 756, y: 30, width: 756, height: 950))
+        #expect(tracker.changed(Layout(screens: screens, windows: [a, b])))
+        #expect(!tracker.changed(Layout(screens: screens, windows: [a, b])))
+
+        var nudged = a
+        nudged.frame.origin.x += 3
+        nudged.visible = 0.9
+        #expect(!tracker.changed(Layout(screens: screens, windows: [nudged, b])), "small moves and visibility wobble are ignored")
+
+        var refocused = a
+        refocused.focused = false
+        #expect(!tracker.changed(Layout(screens: screens, windows: [refocused, b])), "focus has its own records")
+
+        #expect(tracker.changed(Layout(screens: screens, windows: [b, a])), "stacking order changed")
+        var moved = b
+        moved.frame.origin.x = 1700
+        moved.screen = 1
+        #expect(tracker.changed(Layout(screens: screens, windows: [moved, a])), "moved to the other screen")
+        #expect(tracker.changed(Layout(screens: [screens[0]], windows: [moved, a])), "a screen was unplugged")
+    }
+
+    @Test func hiddenWindowKeepsFrameButNotApp() throws {
+        let hidden = Layout.Window(windowID: 5, bundleID: "", appName: "", frame: CGRect(x: 0, y: 0, width: 400, height: 300),
+                                   screen: 0, visible: 1, focused: false, hidden: .blocked)
+        let record = try Record(dayID: UUID(), at: Date(), kind: .layout, body: Layout(screens: screens, windows: [hidden]))
+        #expect(try record.decode(Layout.self).windows.first?.hidden == .blocked)
+    }
+}
+
+/// Lets #expect call the mutating tracker.
+private final class TrackerBox {
+    var tracker = LayoutTracker()
+    func changed(_ layout: Layout) -> Bool { tracker.changed(layout) }
+}
