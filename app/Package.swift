@@ -18,6 +18,8 @@ let package = Package(
                 .linkedFramework("AppKit"),
                 .linkedFramework("ApplicationServices"),
                 .linkedFramework("ServiceManagement"),
+                .linkedFramework("ScreenCaptureKit"),
+                .linkedFramework("Vision"),
             ]
         ),
         // Development tool: writes records in a loop so scripts/crash-test.sh can kill it mid-write.

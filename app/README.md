@@ -1,13 +1,15 @@
 # Think My Day
 
-正式 App。现在是 M4 的骨架（#4）：菜单栏 App、记录库、系统授权检查和开机自动启动。开启一天、读取窗口文字等由 M4 的其他 issue 加入。
+正式 App，M4 记录层进行中。已有：菜单栏 App、记录库、系统授权检查、开机自动启动（#4），开启一天和结束一天（#5），读取窗口文字（#6）。
 
 ## 目录
 
 | 路径 | 内容 |
 | --- | --- |
 | `Sources/ThinkMyDayCore/` | 记录库和领域类型，不依赖界面，可直接测试 |
+| `Sources/ThinkMyDayCore/Capture/` | 可见性规则、行去重、网址去参数、OCR 限频、无输入判定（纯逻辑，有测试） |
 | `Sources/ThinkMyDay/` | 菜单栏 App |
+| `Sources/ThinkMyDay/Capture/` | 读取窗口：辅助功能遍历、窗口列表、Chrome 网址、OCR、触发时机 |
 | `Sources/tmd-store-stress/` | 开发工具：给崩溃测试用的写入器 |
 | `Tests/ThinkMyDayCoreTests/` | 记录库测试 |
 | `scripts/build-app.sh` | 构建通用二进制、签名、安装到 `~/Applications` |
@@ -40,6 +42,18 @@ swift test
 - 所有写入都是一条**事件**（`events` 表）。`review_days`、`records` 等表是事件的投影，在同一个事务里更新，`cursors` 记录投影处理到哪条事件。崩溃后要么事件和投影都在，要么都不在；投影落后时，打开库会自动补上。
 - 结构变更只做前向迁移：在 `Schema.migrations` 末尾追加，不改已发布的条目。库的版本比 App 新时拒绝打开。
 - 加密、保留期限和脱敏分别在 #10、#9 中加入。
+
+## 采集
+
+开启一天之后才读取，结束一天或锁屏、睡眠时停止。读取规则见 `docs/M0b-探测报告.md` §3.1，测试在 `Tests/ThinkMyDayCoreTests/CaptureTests.swift`。
+
+- 触发：切换 App、焦点或标题变化、输入（防抖 1 秒），没有变化时每 5 秒一次。
+- 每次读取当前桌面上可见的窗口（可见比例 ≥ 5%），每个窗口最多 6000 个元素、400 毫秒。
+- 只存和该窗口上一次相比新出现的行（`windowText` 记录的 `added`）。
+- 辅助功能读到的字数少于 50 时用 OCR 识别该窗口：每个窗口每 30 秒最多一次，全局每 5 秒最多一次，超时 10 秒，图片不落盘。读不到时写一条 `gap` 记录。
+- 记录种类：`windowText`、`focus`、`gap`、`presence`（无输入、睡眠、锁屏的边沿）。
+
+开发开关：`open --env TMD_DATA_DIR=路径 ~/Applications/ThinkMyDay.app` 使用另一个记录库；再加 `--env TMD_OCR_COMPARE=1` 时每分钟对焦点窗口做一次 OCR，在日志里和辅助功能字数对照。
 
 启动日志：
 

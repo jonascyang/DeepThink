@@ -15,12 +15,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var openDay: ReviewDay?
     private var lastDay: ReviewDay?
     private var statusTimer: Timer?
+    private var capturer: Capturer?
+    private var triggers: CaptureTriggers?
 
     private let log = Logger(subsystem: "com.jonascyang.thinkmyday", category: "app")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
-            store = try RecordStore(url: RecordStore.defaultURL())
+            let store = try RecordStore(url: RecordStore.defaultURL())
+            self.store = store
+            let capturer = Capturer(store: store)
+            self.capturer = capturer
+            triggers = CaptureTriggers(capturer: capturer)
         } catch {
             storeError = "\(error)"
             log.error("store failed to open: \(error, privacy: .public)")
@@ -59,6 +65,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             log.error("reading days failed: \(error, privacy: .public)")
         }
         updateIcon()
+        // Recording runs exactly while a 复盘日 is open.
+        if let openDay {
+            capturer?.start(dayID: openDay.id, options: Settings.captureOptions)
+            triggers?.start()
+        } else {
+            triggers?.stop()
+            capturer?.stop()
+        }
     }
 
     private func updateIcon() {
@@ -158,6 +172,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refreshChrome(ask: false)
 
         menu.addItem(.separator())
+        let ocr = NSMenuItem(title: "读不到文字时用 OCR 识别", action: #selector(toggleOCR), keyEquivalent: "")
+        ocr.target = self
+        ocr.state = Settings.ocrEnabled ? .on : .off
+        menu.addItem(ocr)
+        let idleMenu = NSMenu()
+        for minutes in [1, 3, 5] {
+            let item = NSMenuItem(title: "\(minutes) 分钟", action: #selector(setIdleMinutes(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = minutes
+            item.state = Settings.idleMinutes == minutes ? .on : .off
+            idleMenu.addItem(item)
+        }
+        let idle = NSMenuItem(title: "多久没有输入算作无输入", action: nil, keyEquivalent: "")
+        idle.submenu = idleMenu
+        menu.addItem(idle)
+
         let login = NSMenuItem(title: "开机自动启动", action: #selector(toggleLoginItem), keyEquivalent: "")
         login.target = self
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -203,6 +233,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 refreshChrome(ask: true)
             }
         }
+    }
+
+    @objc private func toggleOCR() {
+        Settings.ocrEnabled.toggle()
+        capturer?.update(options: Settings.captureOptions)
+    }
+
+    @objc private func setIdleMinutes(_ sender: NSMenuItem) {
+        Settings.idleMinutes = sender.tag
+        capturer?.update(options: Settings.captureOptions)
     }
 
     @objc private func toggleLoginItem() {
