@@ -1,12 +1,13 @@
 # Think My Day
 
-正式 App，M4 记录层进行中。已有：菜单栏 App、记录库、系统授权检查、开机自动启动（#4），开启一天和结束一天（#5），读取窗口文字（#6）。
+正式 App，M4 记录层进行中。已有：菜单栏 App、记录库、系统授权检查、开机自动启动（#4），开启一天和结束一天（#5），读取窗口文字（#6），写入前脱敏（#9）。
 
 ## 目录
 
 | 路径 | 内容 |
 | --- | --- |
 | `Sources/ThinkMyDayCore/` | 记录库和领域类型，不依赖界面，可直接测试 |
+| `Sources/ThinkMyDayCore/Redaction/` | 写入前脱敏；`BIP39Words.swift` 由官方词表生成，不要手改 |
 | `Sources/ThinkMyDayCore/Capture/` | 可见性规则、行去重、网址去参数、OCR 限频、无输入判定（纯逻辑，有测试） |
 | `Sources/ThinkMyDay/` | 菜单栏 App |
 | `Sources/ThinkMyDay/Capture/` | 读取窗口：辅助功能遍历、窗口列表、Chrome 网址、OCR、触发时机 |
@@ -41,7 +42,8 @@ swift test
 - 单库 SQLite，WAL，`synchronous = FULL`。
 - 所有写入都是一条**事件**（`events` 表）。`review_days`、`records` 等表是事件的投影，在同一个事务里更新，`cursors` 记录投影处理到哪条事件。崩溃后要么事件和投影都在，要么都不在；投影落后时，打开库会自动补上。
 - 结构变更只做前向迁移：在 `Schema.migrations` 末尾追加，不改已发布的条目。库的版本比 App 新时拒绝打开。
-- 加密、保留期限和脱敏分别在 #10、#9 中加入。
+- 写入前脱敏（#9）：每条记录写库前经过 `Redactor`，替换私钥（PEM、64 位十六进制、WIF、xprv）、助记词（连续 12 个以上 BIP39 英文或简体中文词）、JWT、常见服务的 API key、`password=`/`密码：` 一类赋值的值、通过 Luhn 校验的卡号，网址去掉 query 和 fragment；钱包地址保留。单独出现、没有标签的密码无法识别，密码输入框本身不读。64 位十六进制按私钥处理，交易哈希也会被隐去。
+- 加密和保留期限在 #10 中加入。
 
 ## 采集
 

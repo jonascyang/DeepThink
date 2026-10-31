@@ -124,7 +124,10 @@ public actor RecordStore {
     // MARK: - Projection
 
     /// Writes the event and applies it. Callers wrap this in a transaction.
+    /// Record bodies are redacted here, so no write path can store a secret (PRD §10, #9).
     private func insert(_ event: Event) throws -> Int64 {
+        var event = event
+        if case .recordCaptured(let record) = event { event = .recordCaptured(try record.redacted()) }
         try db.run("INSERT INTO events (at, day_id, kind, payload) VALUES (?, ?, ?, ?)",
                    [.double(event.at.timeIntervalSince1970), .text(event.dayID.uuidString), .text(event.kind), .blob(try event.payload())])
         let id = db.lastInsertRowID
