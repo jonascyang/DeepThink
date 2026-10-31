@@ -1,0 +1,78 @@
+Use case: ui-mockup / style-transfer
+Asset type: high-fidelity macOS UI design for Think My Day.
+
+Input image 1 is the previous UI concept. The user now wants it "更加简约极客一点" (more minimal and geek-oriented). Completely redesign the visual style. Preserve only the product functions: a personal AI conversation about the day, user-controlled to-dos, date navigation, recording status, and end-day action.
+
+Design direction: an exceptionally well-designed personal text terminal. Mature, spare, intimate, quiet. A developer would love its simplicity, but the Chinese conversation remains accessible and humane. Companionship comes from the actual dialogue, not mascots, slogans or decorative warmth.
+
+Visual style:
+- ONE clean macOS application window, straight-on, nearly filling a 1536 x 1024 landscape canvas. A small neutral dark margin. Flat screenshot, no hardware, no perspective.
+- Warm near-black charcoal (#151514) main surface; pale off-white (#e6e5df) body text; readable warm gray secondary text. A single muted sage/olive accent (#a9b98a) for a tiny status dot, speaker label and prompt caret. Monochrome first, accent very sparingly.
+- Crisp fine rules (#30302d), precise spacing, no visible gradients, no glow, no grain, no texture.
+- SF Mono / IBM Plex Mono for Latin, time, numbers and labels, with a clean compatible Chinese sans-serif fallback. Visually consistent, compact, sharp Chinese text. NO serif typography.
+- No mascots, avatars, illustrations, floating orbs, scenery, ornamental shapes, motivational headlines, giant greeting, cards, speech bubbles, dashboard panels, pill buttons, charts, graphs, progress meters or gamification.
+- Native small traffic-light controls; small corner radius only on the outer window. Interior controls mostly text and fine square outlines.
+- Outstanding restraint and alignment: an 8px rhythm, about 64px left margin, a comfortable 16–18px Chinese reading size, strong yet quiet hierarchy. Treat typography as the design.
+
+Layout:
+A thin 44px-ish titlebar contains traffic lights, small wordmark "Think My Day", and on the far right a tiny sage dot with "记录中", plain-text "结束一天", and a small understated settings icon.
+Below, a narrow utility row contains previous/next chevrons and the date "2026-10-30 · 今天". Keep it subtle.
+Main area: 74% width transcript on the left, 26% compact to-dos on the right, separated by ONE hairline vertical rule. It is not an enterprise sidebar: minimal label, plain-text rows, generous quiet empty space.
+No additional navigation, rails, icon toolbars or analytics.
+
+Left transcript:
+Direct text on the charcoal background. Each speaker has a tiny lowercase monospace label with time, separated from body by about 10px. Each message block separated by 32px. AI label uses the muted sage accent; user label uses warm gray. NO avatars and NO chat bubbles.
+
+First block label:
+"day  19:40"
+Body:
+"晚上好。今天主要做了这些事情："
+Then four simple, carefully aligned plaintext rows, not a table or card:
+"稳定币研究与文档编辑     2h 18m"
+"核对储备数据             46m"
+"合作沟通                 52m"
+"浏览 X                   28m"
+Below the list:
+"研究文档还没写完。想先聊聊卡在哪里吗？"
+A small tertiary disclosure link:
+"[ 查看相关记录 ]"
+
+Second block label:
+"you  19:42"
+Body:
+"其实大部分时间都在核对数据，报告还没写完。"
+The user block may be indented by 16px or have a single short gray left rule to distinguish it, but no enclosing box.
+
+Third block label:
+"day  19:43"
+Body:
+"那我们先从核对数据聊起。"
+"是口径难对齐，还是还缺一些资料？"
+Tiny muted secondary text beneath:
+"已根据你的补充更新"
+
+Composer pinned to bottom of the LEFT pane:
+A thin horizontal separator, then a minimalist single-line prompt area with sage ">" at left and placeholder "接着聊，或补充今天的事情…".
+At right, a small plain square send-arrow icon. No pill outline or oversized container.
+A very small secondary keyboard hint below: "Enter 发送 · Shift Enter 换行".
+This should feel like a polished conversational command prompt, not actual source code. Do not show code, shell commands, fake logs or programming jargon.
+
+Right to-do area:
+Small monospace-like heading "待办" with a tiny plus at the right.
+Unchecked square-checkbox rows:
+"[ ] 完成稳定币研究文档"
+Under it, indented muted secondary line "已进行 2 天"
+"[ ] 整理本周合作进展"
+Under it, indented muted secondary line "今天添加"
+A small vertical breathing gap, a short hairline.
+Small gray section label "今天完成"
+"[x] 回复合作方"
+Completed item muted with subtle strikethrough only on the text, not the checkbox.
+Below, a quiet text action "+ 记下一件事".
+Do not repeat checkbox symbols if the graphical checkbox already uses the [ ] shape. The result should be just one checkbox per item.
+No score, counts, percentages, streaks, or AI-mark-complete affordances.
+
+Quality bar:
+A visually distinctive, implementable, lovingly precise developer-oriented consumer app. Strong text craft and disciplined simplicity, reminiscent of a beautifully configured personal terminal or plain-text editor, while remaining a welcoming conversation. Not neon-green hacker cosplay, not cyberpunk, not a generic gray office dashboard, not a marketing landing page.
+All Chinese must be accurately rendered and readable. All visible activity and conversation are fictional sample data.
+

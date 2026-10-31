@@ -1,0 +1,80 @@
+Use case: ui-mockup.
+Asset type: one refined interaction concept board for Think My Day, showing THREE states of the SAME minimal desktop companion interface.
+
+Context: The user rejected four preceding concepts: generic office-software chat plus sidebar; cartoon mascots and illustrated scenery; pastel gradients and giant editorial greetings; then a terminal-style "geek" design. They want simplicity with a few thoughtful design ideas and a personal sense of companionship. Do not add new visual stereotypes. Explore quiet, content-led interaction design. This is a hypothesis for discussion, not a claim of an implemented product.
+
+Main concept: "A conversation that quietly keeps your day together."
+The clever design is that an ordinary conversation contains small time anchors that unfold into evidence; unfinished to-dos stay behind a tiny edge tab; a user's own clarification visibly becomes a supplementary note linked to that part of the day. The interface stays small, approachable and clean.
+
+Board:
+Landscape high-resolution, around 2400 x 1600 if possible.
+Very pale neutral-gray background. At the top a small understated caption:
+"Think My Day / 交互方向草图"
+Below, three equal compact native-desktop windows arranged left to right with generous space between them, each about 30% of board width and 70% of board height. These are three states, not three alternative skins. All windows have exactly the same dimensions, typography and positions for shared controls.
+Small headings ABOVE the windows, outside the app:
+"01  先聊"
+"02  顺手回看"
+"03  补上一笔"
+Small explanatory captions BELOW each window:
+"记录不抢占界面"
+"沿着一句话找到依据"
+"你的补充成为当天的一部分"
+
+Visual art direction:
+An outstanding minimalist consumer app, contemporary, intimate and precise. Almost-white surfaces with warm graphite text, very restrained soft gray borders, one tiny muted burnt-orange accent used consistently for the active time anchor and supplement marker. No gradients, glow, dark mode, terminal syntax, monospace body text, fake code, avatars, mascots, illustrations, scenery, cards-within-cards, giant slogans, serif headlines or decorative paper. No dashboards, scores or productivity charts.
+Normal highly legible Chinese sans-serif typography, compact but comfortable. Small native traffic lights, a subtle 12px-ish outer corner radius, a very soft realistic window shadow. Use alignment, affordances and state changes as the design. The app has a deliberately small human scale, like a personal companion you can open next to your work.
+All Chinese exact copy must be accurate and readable.
+
+Shared window structure:
+A minimal titlebar reading "Think My Day", tiny traffic lights at left.
+Under it, a plain date label "10月30日 · 今天", and a tiny right-edge tab reading "待办 2". This tab is a slim bookmark-like interface strip, not an illustration or paper ribbon. It can later open the to-do list; do not show a permanent right sidebar.
+The main window is one continuous conversation with plenty of margins. AI text is directly on the white surface, no AI avatars, no repeated product labels, no speech-tail bubbles. The user's text has a subtly tinted gray inset with small rounded corners.
+At the very bottom a modest 44px-ish height message input with placeholder "接着聊…" and a thin send-arrow icon; a tiny recording dot and "记录中" in the footer.
+No giant greeting at the top. No conventional navigation sidebar. No permanent checklist consuming a third of the screen.
+
+Window 01 ("先聊"):
+AI text near top:
+"下午，你花了一段时间对照储备资料。"
+"这件事现在进展到哪里了？"
+Below the message a small inline text anchor:
+"14:08—14:26 · 对照资料"
+The time is preceded by a tiny orange dash; at the right a delicate downward chevron indicates expandability. This looks like a footnote attached to a sentence, not a card or a button toolbar.
+Lower down user text:
+"报告还没写完，主要在核对数据。"
+AI reply:
+"哪一部分最难对齐？"
+Leave real conversational breathing room.
+
+Window 02 ("顺手回看"):
+Same first AI message and same time anchor in the same positions.
+The time anchor is now active in burnt orange and expanded. Immediately beneath it, show a compact inline evidence region defined by ONE thin left rule, not an enclosing heavy card:
+"同时可见"
+"左侧  Chrome · 储备报告"
+"右侧  文档 · 研究笔记"
+"正在操作：右侧文档"
+Small quiet footer "来自窗口记录".
+Keep it visually nested beneath the time anchor and local to the sentence.
+Under the region, the same user text:
+"报告还没写完，主要在核对数据。"
+The conversation is still on screen. The interaction does not navigate to a separate log page. Input stays anchored to bottom.
+
+Window 03 ("补上一笔"):
+Same first AI text and date/tab structure.
+The evidence region is collapsed again. The original time anchor still says:
+"14:08—14:26 · 对照资料"
+This preserves the source record.
+User text:
+"这段其实是在核对不同来源的储备数据。"
+AI reply:
+"明白，已经把这句补进今天的记录。"
+Below the reply, a tiny orange dot and a compact supplementary line, in the same visual family as the original time anchor:
+"用户补充 · 核对储备数据"
+A smaller secondary phrase:
+"关联 14:08—14:26"
+This is an additional source-labelled note, not a replacement of the original captured facts. Do not add a checkmark or mark any to-do complete automatically.
+Show a faint short linking line or aligned orange markers that visually connects the new supplement with the original time anchor. This subtle connection is the main clever detail; the screen remains clean.
+Input stays at bottom in exactly the same position.
+
+Constraints:
+The visual should show a coherent thoughtful product interaction with little UI, not a marketing presentation with decorative arrows and giant paragraphs. Do not add any feature beyond the transcript, inline evidence, supplement note, small to-do tab, date and recording state. The user has not approved this interaction yet; this is a concept sketch with fictional content.
+

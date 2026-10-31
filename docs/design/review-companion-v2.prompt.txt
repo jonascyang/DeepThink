@@ -1,0 +1,52 @@
+Use case: ui-mockup / style-transfer
+Asset type: a high-fidelity macOS desktop UI concept for Think My Day, a personal companion for reflecting on one's day.
+Input image 1 is ONLY a functional reference for conversational review plus user-controlled to-dos. Completely redesign its visual language and composition. Do not preserve the office-software appearance.
+
+Primary design idea: "A quiet place to come back to at the end of the day." The app should feel like a thoughtful little companion sitting beside you, with a distinctive, emotionally warm art direction. It is a usable product interface, not a landing page, not a poster, and not an illustrated room with a tiny illegible UI.
+
+Canvas: landscape 1536 x 1024 or a comparable landscape size. ONE straight-on macOS app window taking 94% of the canvas. Small native traffic-light controls and a minimal blended titlebar. No hardware, no perspective.
+Art direction: deep dusk-indigo / muted aubergine atmospheric background, warm apricot light, oat-cream paper surfaces, soft coral accents, subtle tactile paper grain. Restrained, mature picture-book sensibility; charming but never childish or sugary. Use genuinely sophisticated color relationships and asymmetry. A broad soft painted glow in one corner and a few extremely restrained dusk shapes can create atmosphere; avoid a generic full-screen rainbow gradient. Warm dark text on cream panels and clear off-white text on the dark background. Absolutely legible simplified Chinese.
+
+Companion identity: create a single small original character, a softly rounded warm amber lantern/pebble creature with two tiny dark eyes and a subtle attentive expression, tiny feet, a gentle internal glow. It sits beside the opening conversation, like a quiet presence. Visually distinctive and beautifully rendered, not an emoji, not a stock robot, not a huge pet simulation. It should occupy roughly 8% of the screen, leaving the product content dominant. The character is the conversational identity; do not repeat the corporate wordmark above each message.
+
+Composition:
+- Small "Think My Day" brand in the top-left blended titlebar. Top-right a tiny green status dot and "记录中", a quiet pill "结束一天", and a subtle settings icon.
+- In the main left area (roughly 72% width), a small date selector "10月30日 · 今天" with discreet left/right arrows.
+- A beautiful warm editorial greeting in a slightly larger elegant Chinese serif heading: "今天，想从哪件事聊起？". A small secondary line: "我在，慢慢说。". This should feel welcoming and intimate, not like an enterprise dashboard hero.
+- The small companion rests near the first cream conversation surface. Main conversation is an organic, lightly rounded cream paper area integrated into the scene, with generous breathing room and a beautiful mix of typography. No chat bubbles boxed inside more boxes.
+- The right area is NOT a full-height gray sidebar. Make a smaller floating oat-paper notebook panel for "待办", offset a little lower than the greeting, with a beautiful subtle fold or paper edge and a tiny coral bookmark. It remains clearly usable, subordinate to the conversation, roughly 26% of width.
+- Bottom-left is a large but restrained cream rounded composer, with a very faint apricot outline. Placeholder "想聊什么，都可以从这里开始…" and a circular warm-coral send arrow. A tiny secondary label "和今天聊聊" may sit above it. No blue enterprise button, no microphone or attachments.
+- Do not add a navigation rail, charts, a productivity score, streaks, badges, motivational quotas, or progress rings.
+
+Conversation content, exact Chinese:
+First AI message, a small quiet metadata label "今天的片段":
+"下午，你在研究文档和储备报告之间来回对照。"
+"现在想聊聊这件事，还是从别的事情开始？"
+Under it, two small subdued text links/chips:
+"研究文档 · 2 小时 18 分"
+"合作沟通 · 52 分钟"
+And a subtle text disclosure link "看看当时的记录 ›".
+
+User reply, right-aligned on a small muted-apricot speech surface:
+"其实今天大部分时间都在核对数据。"
+
+Companion reply, directly on a cream or subtly lighter conversation region:
+"嗯，那我们先把这段记清楚。"
+"对数据时，哪一处最费心？"
+Add a tiny metadata tag "已根据你的补充更新", small and quiet.
+
+Right notebook panel exact copy:
+"待办" with a small + icon
+Unchecked circle: "完成稳定币研究文档"
+Secondary line "已进行 2 天"
+Unchecked circle: "整理本周合作进展"
+Secondary line "今天添加"
+A short soft divider
+Small muted caption "今天完成"
+One checked, gently struck-through item: "回复合作方"
+At the bottom, a subtle action "+ 记下一件事".
+The checkboxes must clearly belong to the user. No AI completion action.
+
+Make the interface feel designed by an outstanding consumer-product designer and illustrator working together: confident type hierarchy, a coherent original companion identity, meaningful whitespace, soft imperfect material detail, precise interaction affordances. Preserve readable text and usable layout. Let warmth come from presence, pacing, color and character, not from cheerleading claims. Avoid statements such as "你今天已经很棒", diagnosis, judgment, or claims that the AI truly feels emotions.
+No factual interpretation or performance score. No distraction verdicts, no upload approval, no external-send log. All visible activity content is fictional sample content for a static concept.
+

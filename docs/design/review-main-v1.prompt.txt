@@ -1,0 +1,61 @@
+Use case: ui-mockup
+Asset type: a high-fidelity Chinese macOS desktop application main-window design for Think My Day, shown straight-on as a crisp UI screenshot.
+Primary request: Design the main conversational daily-review screen for a personal macOS menu-bar application. This is a visual concept with fictional sample data, not an implemented app.
+
+Canvas and style: wide landscape around 2400 x 1600. Show ONE large application window occupying most of the canvas, with small breathing room around it on a warm pale-gray background. No computer hardware, no browser frame, no presentation slides, no perspective. Understated, carefully composed macOS-native productivity software. Warm off-white surfaces, charcoal text, delicate gray borders, restrained indigo-blue interactive accents, a tiny green recording indicator. Flat, refined, quiet, legible. Native macOS red/yellow/green traffic lights, precise rounded corners, very subtle shadow. PingFang SC / SF Pro typography, excellent Chinese glyph fidelity. Clear hierarchy and comfortable line spacing, but compact enough to feel like a real desktop tool.
+
+Layout:
+- One narrow titlebar with traffic lights on the left and the small name "Think My Day". At the right a green dot and "记录中", a subtle "结束一天" button, and a settings gear. Keep these controls small.
+- Below the titlebar, the main content is two panes separated by a thin vertical hairline: LEFT 70% width conversational review, RIGHT 30% width to-dos. No navigation sidebar, no dashboard tiles, no charts, no productivity scores.
+- Left pane top: back and forward chevrons surrounding a date selector reading "10月30日 · 今天", with a tiny calendar icon; discreet secondary text "复盘".
+- Left pane conversation: an AI message with a small abstract sun/arc icon and a tiny "Think My Day" attribution, followed by readable rich text. AI text sits directly on the light canvas, not in oversized colorful cards. A short user reply is right-aligned in a pale warm-gray chat bubble. A follow-up AI reply sits below. Keep all chat text inside the content area with good margins.
+- Left pane bottom: a clean rounded message composer pinned to the bottom, placeholder "聊聊今天，或补充一段记录…", a small keyboard hint "↵ 发送", and a compact indigo send arrow button. No microphone or attachments invented.
+- Right pane: header "待办" and a small plus icon. Two unchecked items with thin empty circular checkboxes, their age displayed on a quiet second line. Below a divider, a subdued "已完成 · 2" group with two checked items in muted gray and restrained strikethrough. Leave ample whitespace below. A tiny footer note says "完成后，由你勾选". No progress ring or score.
+
+Exact Chinese UI copy:
+AI opening:
+"今天 10:12 开启，比计划晚了 42 分钟。"
+"今天主要做了这些事情："
+List four neat text rows, durations aligned:
+"稳定币研究与文档编辑"  "2 小时 18 分"
+"核对储备数据"  "46 分钟"
+"合作沟通"  "52 分钟"
+"浏览 X"  "28 分钟"
+Then:
+"「完成稳定币研究文档」还没勾选。你还在补材料，还是只差发送？"
+Add a small inline source disclosure link: "查看依据 ›".
+
+User bubble:
+"主要在对数据，报告还没写完。"
+
+AI follow-up:
+"明白，这段主要是在核对研究数据。"
+"你卡在数据口径，还是缺少必要资料？"
+
+Below that reply, show ONE compact expanded evidence inset (a quiet thin-bordered strip, not a dashboard):
+Header "14:08—14:26 · 对照数据"
+Two small side-by-side source blocks:
+"左侧 · 同时可见"
+"Chrome · 发行方储备报告"
+"右侧 · 正在操作"
+"文档 · 稳定币研究"
+A light secondary line "依据来自窗口文字与切换记录". This inset demonstrates that two windows can be visible simultaneously and that only one has interaction focus. It must remain secondary to the conversation.
+
+Right to-do exact copy:
+Unchecked "完成稳定币研究文档"
+Secondary "已进行 2 天"
+Unchecked "整理本周合作进展"
+Secondary "今天添加"
+Completed "核对储备数据"
+Completed "回复合作方"
+
+Constraints: faithfully render readable simplified Chinese copy. The dominant product is the conversation with to-dos alongside, as described. Do not invent tracking approvals, upload previews, external-send logs, distraction verdicts, gamification, health scores, or full-screen timelines. Avoid decorative illustrations, gradients, glassmorphism, giant headlines, excessive cards, and a web SaaS dashboard appearance. The result should feel like a polished, implementable native macOS personal tool rather than a marketing mockup.
+
+Targeted follow-up edit:
+Edit this existing Think My Day macOS UI screenshot. Preserve the entire layout, every Chinese sentence, typography, icons, colors, window size, to-dos, and evidence card exactly as they are. Make ONLY these three small gray conversation-metadata timestamp replacements:
+1. Beside the first "Think My Day" attribution, replace "今天 10:12" with "今天 19:40".
+2. Above the right-aligned user message, replace "今天 10:24" with "今天 19:42".
+3. Beside the second "Think My Day" attribution, replace "今天 10:25" with "今天 19:43".
+Do NOT change the body sentence "今天 10:12 开启，比计划晚了 42 分钟。" because 10:12 is the day's start time, not the conversation timestamp.
+Do NOT change the evidence time "14:08—14:26". The review happens in the evening after that evidence was recorded.
+Make no other edits. Keep Chinese text fully legible.

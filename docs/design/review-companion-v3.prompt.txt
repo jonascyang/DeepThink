@@ -1,0 +1,72 @@
+Use case: ui-mockup / style-transfer.
+Asset type: high-fidelity Chinese macOS desktop UI for Think My Day, a personal daily-reflection companion.
+
+Input image 1 is the previous concept. The user rejected it as too cartoonish. SUBSTANTIALLY REDESIGN THE WHOLE IMAGE. Keep only the essential functions: a personal conversation on the left and a small user-controlled to-do area on the right. Replace all scenery, characters, textures, speech shapes and decorative elements.
+
+Design brief:
+A refined, contemporary, emotionally warm interface for adults. It should feel personal, attentive and quiet, like a beautifully designed private journal that talks with you. Accomplish companionship through typography, pacing, soft ambient color, a carefully chosen conversational voice and human-scale proportions. It must also have a confident visual identity and avoid the generic gray enterprise productivity app from the original iteration.
+
+Visual direction:
+- A single native macOS app window, straight-on, about 1440 x 900 within a 1536 x 1024 landscape canvas; a narrow clean neutral margin around it. No physical computer or perspective.
+- Main surface is pale warm ivory with a very restrained luminous wash of dusty lilac and blush toward the upper-left corner. The effect is light passing through frosted glass, abstract and nearly flat, not an illustration.
+- Warm deep-plum ink for headings; dark warm-gray body text; muted taupe secondary text; a restrained deep-plum action color.
+- No characters, mascots, faces, pets, illustrated rooms, sunset scenes, furniture, paper books, paperclips, bookmark ribbons, skeuomorphic paper texture or 3D objects.
+- A tiny abstract soft-halo identity mark, about 34 pixels, beside the conversational greeting: a beautifully subtle lilac/apricot blurred circle or overlapping translucent rings with NO FACE. This is a quiet presence, not a large hero decoration.
+- Clear modern Chinese sans-serif body type, with one elegant slightly literary Chinese serif greeting. Crisp Chinese glyphs, comfortable body line-height and restrained scale. An art-directed consumer interface, precise but warm.
+- The app should look buildable using real interface components, not a lifestyle illustration or a marketing landing page.
+
+Composition:
+Native tiny traffic-light controls in the top-left of a minimal titlebar. Small wordmark "Think My Day". At the upper-right, small quiet "记录中" with a subtle status dot, a low-emphasis "结束一天" control, and one settings icon.
+
+The content is asymmetric: a spacious conversational area taking 72% width, a light small to-do area taking 28%. Separate them by whitespace, not a full-height boxed sidebar or a heavy vertical rule. No navigation rail, no dashboard tiles, no KPI cards, no charts.
+
+Top-left inside content: a discreet date selector "10月30日 · 今天", with small previous/next chevrons. Under it the soft-halo mark and the heading:
+"今天，慢慢聊。"
+In smaller text:
+"从你在意的那件事开始。"
+Heading should be intimate and elegant, not enormous. It takes under 18% of window height.
+
+Conversation below:
+Small metadata "今天 19:40".
+AI text directly on the canvas, with no surrounding corporate card:
+"下午，你在研究文档和储备报告之间来回对照。"
+"这件事现在进展到哪里了？"
+Under it a very understated horizontal text summary:
+"研究与写作  2小时18分     合作沟通  52分钟"
+Then a small tertiary link:
+"看看当时的记录 ↗"
+
+A user response is right-aligned in a restrained pale-beige rounded rectangle with a 12px corner radius, no speech tail:
+"其实大部分时间都在核对数据，报告还没写完。"
+
+Follow-up AI, unboxed and calm:
+"那我们先聊聊核对数据这部分。"
+"是数据口径难对齐，还是还缺一些资料？"
+A tiny unobtrusive source-status caption:
+"已根据你的补充更新"
+Do not repeat the product name or add an avatar before every message.
+
+At the bottom-left, a pinned minimalist composer: softly tinted pale lilac-white surface with a delicate border, compact 56px-ish height and moderate 14px corner radius. Placeholder:
+"想从哪里开始，都可以。"
+A small circular deep-plum send-arrow button at the far right. No extra toolbar.
+
+To-do area:
+Starts slightly lower than the greeting, aligned with the first conversation.
+Small heading "待办" and a fine plus icon.
+Two open-circle items, each with room to breathe:
+"完成稳定币研究文档"
+"已进行 2 天"
+"整理本周合作进展"
+"今天添加"
+A short low-contrast separator.
+A tiny caption "今天完成".
+One small checked item in muted text:
+"回复合作方"
+At the bottom, small tertiary action:
+"+ 记下一件事"
+The entire to-do area is quiet, a flat integrated surface or a VERY lightly tinted soft rectangular region. Not a tall white office-software checklist panel and not a notebook illustration.
+
+Quality bar:
+The user should notice sophisticated color, typography and space first; warmth and attention second; functional clarity third. Keep the composition clean and spacious but not empty. Do not solve the request simply by tinting an enterprise chat UI beige. Give the whole screen a cohesive plum/lilac/ivory visual signature with subtle asymmetry and expressive yet disciplined typography.
+All visible Chinese must be accurate and legible. All activities are fictional sample data. No scoring, judgment, streaks, badges, cute language, cheerleading, upload confirmations or send logs.
+

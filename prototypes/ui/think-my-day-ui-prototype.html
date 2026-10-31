@@ -1,0 +1,376 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Not production code.
+  Question: what should Think My Day's four surfaces look like?
+  Surfaces: menu bar dropdown, 开启一天 panel, review window, new-work notification.
+  Switch surface with the tabs at the top; switch variant with the bottom bar or ← / →.
+  URL keeps ?surface=…&variant=… so a view can be shared and reloaded. Fake data, nothing is saved.
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Think My Day 界面原型</title>
+<style>
+  :root {
+    --bg: #e9e9ee; --win: #ffffff; --side: #f5f5f7; --line: #dcdce1; --text: #1d1d1f; --mute: #6e6e73;
+    --accent: #3b6ef5; --accent-soft: #e8eeff; --ok: #2f9e5b; --warn: #c27c0e; --ai: #f4f4f6; --me: #3b6ef5;
+    --chip: #efeff3; --shadow: 0 18px 50px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; color: var(--text); background: var(--bg); min-height: 100vh; }
+  button { font: inherit; cursor: pointer; }
+  .tabs { display: flex; gap: 6px; padding: 14px 16px 0; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 14px; color: var(--mute); }
+  .tab.on { background: var(--text); color: #fff; border-color: var(--text); }
+  .hint { padding: 6px 16px 0; color: var(--mute); font-size: 12px; }
+  .stage { padding: 24px 16px 110px; display: flex; justify-content: center; }
+
+  /* macOS-ish chrome */
+  .window { background: var(--win); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; width: min(1100px, 100%); height: 680px; display: flex; flex-direction: column; }
+  .titlebar { height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--line); background: #fbfbfd; flex-shrink: 0; }
+  .lights { display: flex; gap: 7px; } .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+  .titlebar .t { flex: 1; text-align: center; font-weight: 600; font-size: 13px; color: var(--mute); }
+  .datebar { display: flex; align-items: center; gap: 6px; }
+  .datebar button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 1px 8px; color: var(--mute); }
+  .datebar b { font-size: 13px; }
+
+  .menubar { width: min(1100px,100%); height: 26px; background: rgba(255,255,255,.75); border-radius: 8px; display: flex; justify-content: flex-end; align-items: center; gap: 16px; padding: 0 14px; font-size: 13px; position: relative; }
+  .menubar .icon { padding: 1px 8px; border-radius: 5px; background: rgba(0,0,0,.12); font-weight: 600; }
+  .dropdown { position: absolute; top: 32px; right: 90px; width: 330px; background: rgba(250,250,252,.98); border-radius: 12px; box-shadow: var(--shadow); padding: 8px; font-size: 13px; }
+  .dd-row { padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; gap: 8px; }
+  .dd-row.btn:hover { background: var(--accent); color: #fff; }
+  .dd-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+  .dd-mute { color: var(--mute); font-size: 12px; }
+
+  /* shared bits */
+  .todo { display: flex; align-items: flex-start; gap: 9px; padding: 7px 4px; border-radius: 6px; }
+  .todo input { margin-top: 3px; accent-color: var(--accent); }
+  .todo .meta { color: var(--mute); font-size: 12px; }
+  .todo.done .name { text-decoration: line-through; color: var(--mute); }
+  .badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; background: var(--chip); color: var(--mute); margin-left: 4px; }
+  .badge.ai { background: var(--accent-soft); color: var(--accent); }
+  .msg { max-width: 78%; padding: 10px 14px; border-radius: 14px; margin: 6px 0; white-space: pre-wrap; }
+  .msg.ai { background: var(--ai); align-self: flex-start; border-top-left-radius: 4px; }
+  .msg.me { background: var(--me); color: #fff; align-self: flex-end; border-top-right-radius: 4px; }
+  .chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 16px 20px; }
+  .composer { border-top: 1px solid var(--line); padding: 10px 14px; display: flex; gap: 8px; }
+  .composer input { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font: inherit; }
+  .composer button { border: 0; background: var(--accent); color: #fff; border-radius: 10px; padding: 0 16px; }
+  .evidence { display: block; margin-top: 6px; font-size: 12px; color: var(--accent); cursor: pointer; }
+  .ev-box { margin-top: 6px; font-size: 12px; background: #fff; border: 1px dashed var(--line); border-radius: 8px; padding: 6px 8px; color: var(--mute); white-space: normal; }
+  .section-h { font-size: 12px; font-weight: 600; color: var(--mute); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 6px; }
+  .add { width: 100%; border: 1px dashed var(--line); background: transparent; border-radius: 8px; padding: 6px; color: var(--mute); text-align: left; }
+  .chipset { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--chip); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+  .chip.x::after { content: " ×"; color: var(--mute); }
+  .big { border: 0; background: var(--accent); color: #fff; border-radius: 12px; padding: 12px 22px; font-size: 16px; font-weight: 600; }
+  .ghost { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 16px; }
+  .panel { background: var(--win); border-radius: 14px; box-shadow: var(--shadow); width: min(520px,100%); padding: 22px 24px; }
+
+  /* timeline strip (review B) */
+  .strip { display: flex; height: 34px; border-radius: 8px; overflow: hidden; margin: 10px 16px 4px; border: 1px solid var(--line); }
+  .strip div { display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; overflow: hidden; white-space: nowrap; cursor: pointer; }
+  .strip div:hover { filter: brightness(1.08); }
+  .axis { display: flex; justify-content: space-between; color: var(--mute); font-size: 11px; margin: 0 16px; }
+
+  .notif { width: 370px; background: rgba(246,246,248,.97); border-radius: 16px; box-shadow: var(--shadow); padding: 12px 14px; display: flex; gap: 10px; }
+  .notif .app { width: 34px; height: 34px; border-radius: 8px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+  .notif .acts { display: flex; gap: 6px; margin-top: 8px; }
+  .notif .acts button { flex: 1; border: 0; background: #e3e3e8; border-radius: 8px; padding: 5px; }
+  .notif .acts button.pri { background: var(--accent); color: #fff; }
+
+  /* bottom switcher */
+  .switcher { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #111; color: #fff; border-radius: 999px; display: flex; align-items: center; gap: 4px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35); z-index: 99; font-size: 13px; }
+  .switcher button { background: #2a2a2a; color: #fff; border: 0; width: 32px; height: 32px; border-radius: 50%; font-size: 15px; }
+  .switcher .lbl { padding: 0 14px; white-space: nowrap; }
+  .statebar { position: fixed; right: 12px; bottom: 70px; background: rgba(17,17,17,.82); color: #ddd; font: 11px/1.4 ui-monospace, Menlo, monospace; padding: 6px 9px; border-radius: 8px; max-width: 280px; z-index: 98; }
+  @media (max-width: 700px) { .window { height: 760px; } .dropdown { right: 0; } }
+</style>
+</head>
+<body>
+<div class="tabs" id="tabs"></div>
+<div class="hint" id="hint"></div>
+<div class="stage" id="stage"></div>
+<div class="switcher"><button id="prev">←</button><span class="lbl" id="lbl"></span><button id="next">→</button></div>
+<div class="statebar" id="state"></div>
+
+<script>
+// ---------- fake data, in memory only ----------
+const S = {
+  planStart: "09:00", openedAt: "10:32",
+  todos: [
+    { id: 1, name: "交稳定币储备报告", days: 3, src: "user", done: false },
+    { id: 2, name: "回复 Pluso 关于 PRD 的意见", days: 1, src: "ai", done: false },
+    { id: 3, name: "整理 L2 项目笔记", days: 6, src: "user", done: false },
+    { id: 4, name: "修 M0b OCR 卡住", days: 1, src: "ai", done: true },
+  ],
+  hidden: ["1Password", "MetaMask", "招商银行"],
+  things: [
+    { from: "10:32", to: "11:40", name: "写稳定币研究文档", min: 68, color: "#3b6ef5" },
+    { from: "11:40", to: "12:05", name: "刷 X", min: 25, color: "#9aa0ad" },
+    { from: "12:05", to: "13:10", name: "空白（待补充）", min: 65, color: "#d9d9df", gap: true },
+    { from: "13:10", to: "14:20", name: "排查 M0b 探测程序", min: 70, color: "#2f9e5b" },
+    { from: "14:20", to: "15:10", name: "看 L2 项目资料", min: 50, color: "#8a5cf6" },
+    { from: "15:10", to: "15:35", name: "微信聊天", min: 25, color: "#9aa0ad" },
+    { from: "15:35", to: "16:30", name: "写稳定币研究文档", min: 55, color: "#3b6ef5" },
+  ],
+  chat: [],
+  date: "10月30日 周四",
+};
+const OPENING = [
+  { who: "ai", text: "今天 10:32 开启，比计划晚 1 小时 32 分。\n\n主要事情：\n· 写稳定币研究文档 2 小时 3 分（上午、下午两段）\n· 排查 M0b 探测程序 1 小时 10 分\n· 看 L2 项目资料 50 分\n· 刷 X 25 分 · 微信 25 分\n\n待办：「修 M0b OCR 卡住」已勾掉；「交稳定币储备报告」还没勾，已进行第 3 天。",
+    ev: "依据：Pages《稳定币储备研究》10:32–11:40、15:35–16:30 为焦点窗口；Chrome 同时可见储备报告页面。" },
+  { who: "ai", text: "两个观察想问你：\n1. 上午写文档那 68 分钟里，有 6 次切去 X，文档文字增加约 300 字——当时是卡住了吗？\n2. 12:05–13:10 有 65 分钟没有输入，那段在做什么？",
+    ev: "依据：11:02、11:09、11:17、11:24、11:31、11:38 焦点切到 Chrome · x.com；12:05 起无输入，12:31 锁屏。" },
+];
+const REPLIES = [
+  "明白了。那 65 分钟我记为「吃午饭」（用户补充）。\n\n关于报告：卡在储备构成那一节的话，明天开工可以先只写这一节的提纲——要不要把「写储备构成提纲」加进待办？",
+  "好的，已经改了：11:40–12:05 记为「查资料（X 上的储备新闻）」，不再算刷 X。",
+  "这周「整理 L2 项目笔记」已经进行 6 天，累计只出现过两次、共 40 分钟。是优先级变了，还是一直没找到整块时间？",
+];
+let replyIdx = 0;
+S.chat = OPENING.map(m => ({ ...m }));
+
+// ---------- surfaces & variants ----------
+const SURFACES = {
+  menu:   { label: "菜单栏下拉", variants: { A: "清单式", B: "今日卡片", C: "极简" } },
+  start:  { label: "开启一天", variants: { A: "一屏填完", B: "两步向导", C: "一键开启，折叠编辑" } },
+  review: { label: "复盘窗口", variants: { A: "左聊天 右待办", B: "时间轴 + 聊天", C: "纯对话，待办内嵌", D: "三栏：日期｜聊天｜待办" } },
+  notify: { label: "新工作询问", variants: { A: "系统通知", B: "菜单栏气泡" } },
+};
+const params = new URLSearchParams(location.search);
+let surface = SURFACES[params.get("surface")] ? params.get("surface") : "review";
+let variant = SURFACES[surface].variants[params.get("variant")] ? params.get("variant") : "A";
+
+function setView(s, v) {
+  surface = s; variant = v;
+  const p = new URLSearchParams({ surface, variant });
+  try { history.replaceState(null, "", "?" + p.toString()); } catch { /* data: or sandboxed preview: URL can't change */ }
+  render();
+}
+function cycle(d) {
+  const keys = Object.keys(SURFACES[surface].variants);
+  setView(surface, keys[(keys.indexOf(variant) + d + keys.length) % keys.length]);
+}
+document.getElementById("prev").onclick = () => cycle(-1);
+document.getElementById("next").onclick = () => cycle(1);
+document.addEventListener("keydown", e => {
+  const t = e.target;
+  if (t.matches("input, textarea, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") cycle(-1);
+  if (e.key === "ArrowRight") cycle(1);
+});
+
+// ---------- helpers ----------
+const h = (html) => { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstElementChild; };
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+function todoHTML(t) {
+  const meta = t.done ? "今天勾掉" : `已进行 ${t.days} 天`;
+  return `<label class="todo ${t.done ? "done" : ""}"><input type="checkbox" data-todo="${t.id}" ${t.done ? "checked" : ""}>
+    <span><span class="name">${esc(t.name)}</span>${t.src === "ai" ? '<span class="badge ai">AI 询问后加入</span>' : ""}<br><span class="meta">${meta}</span></span></label>`;
+}
+function todoList(filter) {
+  const list = S.todos.filter(filter || (() => true));
+  return list.map(todoHTML).join("") || '<div class="dd-mute">没有待办</div>';
+}
+function wireTodos(root) {
+  root.querySelectorAll("[data-todo]").forEach(cb => cb.onchange = () => {
+    const t = S.todos.find(x => x.id == cb.dataset.todo); t.done = cb.checked; render();
+  });
+  root.querySelectorAll("[data-add]").forEach(b => b.onclick = () => {
+    const name = prompt("新待办"); if (!name) return;
+    S.todos.unshift({ id: Date.now(), name, days: 1, src: "user", done: false }); render();
+  });
+}
+function chatHTML() {
+  return S.chat.map((m, i) => `<div class="msg ${m.who}">${esc(m.text)}${m.ev ? `<span class="evidence" data-ev="${i}">${m.open ? "收起依据" : "展开依据"}</span>${m.open ? `<div class="ev-box">${esc(m.ev)}</div>` : ""}` : ""}</div>`).join("");
+}
+function wireChat(root) {
+  root.querySelectorAll("[data-ev]").forEach(a => a.onclick = () => { const m = S.chat[a.dataset.ev]; m.open = !m.open; render(); });
+  const form = root.querySelector(".composer");
+  if (!form) return;
+  const input = form.querySelector("input");
+  const send = () => {
+    const v = input.value.trim(); if (!v) return;
+    S.chat.push({ who: "me", text: v });
+    S.chat.push({ who: "ai", text: REPLIES[replyIdx++ % REPLIES.length] });
+    render();
+  };
+  form.querySelector("button").onclick = send;
+  input.onkeydown = e => { if (e.key === "Enter") send(); };
+  const chat = root.querySelector(".chat"); if (chat) chat.scrollTop = chat.scrollHeight;
+}
+const composer = `<div class="composer"><input placeholder="回答、补充、纠正，或问「这周我在 X 上花了多久」"><button>发送</button></div>`;
+const titlebar = (extra = "") => `<div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Think My Day</div>
+  <div class="datebar"><button>‹</button><b>${S.date}</b><button>›</button><button>历史</button></div>${extra}</div>`;
+const lateText = "比计划晚 1 小时 32 分";
+
+// ---------- variants ----------
+const V = {
+  // MENU
+  "menu.A": () => `<div class="menubar"><span>🔋</span><span class="icon">TMD ●</span><span>周四 16:30</span>
+    <div class="dropdown">
+      <div class="dd-row"><b>记录中</b><span class="dd-mute">· 10:32 开启（${lateText}）</span></div>
+      <div class="dd-row btn">结束一天</div>
+      <div class="dd-sep"></div>
+      <div class="dd-row dd-mute">待办</div>
+      <div style="padding:0 6px">${todoList(t => !t.done)}</div>
+      <div style="padding:2px 6px 4px"><button class="add" data-add>＋ 新增待办</button></div>
+      <div class="dd-sep"></div>
+      <div class="dd-row btn">打开复盘窗口　⌘R</div>
+      <div class="dd-row btn">不看名单（3 个 App）…</div>
+      <div class="dd-row"><span class="dd-mute">模型：正常 · 上次整理 16:15</span></div>
+    </div></div>`,
+  "menu.B": () => {
+    const done = S.todos.filter(t => t.done).length;
+    return `<div class="menubar"><span>🔋</span><span class="icon">TMD 6:00</span><span>周四 16:30</span>
+    <div class="dropdown" style="width:360px;padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div><div style="font-size:26px;font-weight:700">6 小时 0 分</div>
+      <div class="dd-mute">10:32 开启 · ${lateText}</div></div><button class="ghost">结束一天</button></div>
+      <div class="section-h">刚才在做</div>
+      ${S.things.slice(-3).reverse().map(t => `<div class="dd-row" style="padding:3px 0"><span style="width:8px;height:8px;border-radius:50%;background:${t.color}"></span>${t.name}<span class="dd-mute" style="margin-left:auto">${t.from}–${t.to}</span></div>`).join("")}
+      <div class="section-h">待办 · 已完成 ${done}/${S.todos.length}</div>
+      ${todoList()}
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="big" style="flex:1;font-size:14px;padding:9px">开始复盘</button><button class="ghost">不看名单</button></div>
+    </div></div>`;
+  },
+  "menu.C": () => `<div class="menubar"><span>🔋</span><span class="icon">●</span><span>周四 16:30</span>
+    <div class="dropdown" style="width:240px">
+      <div class="dd-row"><b>记录中</b><span class="dd-mute">· 6 小时</span></div>
+      <div class="dd-row btn">打开 Think My Day</div>
+      <div class="dd-row btn">结束一天</div>
+      <div class="dd-sep"></div>
+      <div class="dd-row dd-mute" style="font-size:12px">待办和不看名单都在主窗口里</div>
+    </div></div>`,
+
+  // START
+  "start.A": () => `<div class="panel">
+    <div style="font-size:20px;font-weight:700">开启今天</div>
+    <div class="dd-mute">计划 09:00 开始 · 现在 10:32，${lateText}</div>
+    <div class="section-h">待办</div>${todoList(t => !t.done)}
+    <button class="add" data-add>＋ 新增待办</button>
+    <div class="section-h">今天不看</div>
+    <div class="chipset">${S.hidden.map(a => `<span class="chip x">${a}</span>`).join("")}<span class="chip" style="background:transparent;border:1px dashed var(--line)">＋ 添加 App</span></div>
+    <div style="margin-top:22px;text-align:right"><button class="big">开启一天！</button></div></div>`,
+  "start.B": () => {
+    const step = S.step || 1;
+    return `<div class="panel">
+    <div class="dd-mute">第 ${step} 步，共 2 步</div>
+    ${step === 1 ? `<div style="font-size:20px;font-weight:700">今天有哪些待办？</div>
+      <div class="dd-mute">昨天没勾掉的已经带过来了</div><div style="margin-top:10px">${todoList(t => !t.done)}</div>
+      <button class="add" data-add>＋ 新增待办</button>
+      <div style="margin-top:22px;display:flex;justify-content:space-between"><span></span><button class="big" data-step="2">下一步</button></div>`
+    : `<div style="font-size:20px;font-weight:700">今天有不想被记录的 App 吗？</div>
+      <div class="dd-mute">沿用上次的设置</div>
+      <div class="chipset" style="margin-top:12px">${S.hidden.map(a => `<span class="chip x">${a}</span>`).join("")}<span class="chip" style="background:transparent;border:1px dashed var(--line)">＋ 添加 App</span></div>
+      <div style="margin-top:22px;display:flex;justify-content:space-between"><button class="ghost" data-step="1">上一步</button><button class="big">开启一天！</button></div>`}
+    </div>`;
+  },
+  "start.C": () => `<div class="panel" style="text-align:center">
+    <div class="dd-mute">${lateText}</div>
+    <button class="big" style="font-size:22px;padding:18px 40px;margin:14px 0">开启一天！</button>
+    <details style="text-align:left;margin-top:6px"><summary>待办 ${S.todos.filter(t => !t.done).length} 项（展开修改）</summary>${todoList(t => !t.done)}<button class="add" data-add>＋ 新增待办</button></details>
+    <details style="text-align:left;margin-top:8px"><summary>不看 ${S.hidden.length} 个 App（展开修改）</summary><div class="chipset" style="margin-top:8px">${S.hidden.map(a => `<span class="chip x">${a}</span>`).join("")}</div></details>
+  </div>`,
+
+  // REVIEW
+  "review.A": () => `<div class="window">${titlebar()}
+    <div style="display:flex;flex:1;min-height:0">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0"><div class="chat">${chatHTML()}</div>${composer}</div>
+      <div style="width:290px;border-left:1px solid var(--line);background:var(--side);padding:12px 14px;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b>待办</b><span class="dd-mute">${S.todos.filter(t => !t.done).length} 项未完成</span></div>
+        ${todoList(t => !t.done)}<button class="add" data-add>＋ 新增待办</button>
+        <div class="section-h">今天勾掉</div>${todoList(t => t.done)}
+      </div></div></div>`,
+  "review.B": () => {
+    const total = S.things.reduce((a, t) => a + t.min, 0);
+    return `<div class="window">${titlebar()}
+    <div class="strip">${S.things.map((t, i) => `<div data-thing="${i}" title="${t.from}–${t.to} ${t.name}" style="flex:${t.min};background:${t.color};${t.gap ? "color:#666;background-image:repeating-linear-gradient(45deg,transparent 0 6px,rgba(0,0,0,.06) 6px 12px)" : ""}">${t.min >= 45 ? t.name : ""}</div>`).join("")}</div>
+    <div class="axis"><span>10:32</span><span>12:00</span><span>14:00</span><span>16:30</span></div>
+    <div class="dd-mute" style="margin:2px 16px 0;font-size:12px">点时间轴上的一段，把它带进对话</div>
+    <div style="display:flex;flex:1;min-height:0">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0"><div class="chat">${chatHTML()}</div>${composer}</div>
+      <div style="width:${S.drawer ? 280 : 44}px;border-left:1px solid var(--line);background:var(--side);transition:width .15s;overflow:hidden">
+        <button class="ghost" data-drawer style="margin:8px;padding:4px 8px">${S.drawer ? "›" : "‹"}</button>
+        ${S.drawer ? `<div style="padding:0 12px"><b>待办</b>${todoList()}<button class="add" data-add>＋ 新增待办</button></div>` : `<div style="writing-mode:vertical-rl;margin:6px auto;color:var(--mute)">待办 ${S.todos.filter(t => !t.done).length}</div>`}
+      </div></div></div>`;
+  },
+  "review.C": () => `<div class="window">${titlebar(`<button class="ghost" style="padding:2px 10px">☑ ${S.todos.filter(t => !t.done).length}</button>`)}
+    <div style="flex:1;display:flex;flex-direction:column;min-height:0;max-width:760px;width:100%;margin:0 auto">
+      <div class="chat">${chatHTML()}
+        <div class="msg ai" style="max-width:420px"><b>你的待办</b>${todoList()}<button class="add" data-add>＋ 新增待办</button></div>
+      </div>${composer}</div></div>`,
+  "review.D": () => `<div class="window"><div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Think My Day</div></div>
+    <div style="display:flex;flex:1;min-height:0">
+      <div style="width:190px;background:var(--side);border-right:1px solid var(--line);padding:10px;overflow-y:auto">
+        <button class="big" style="width:100%;font-size:13px;padding:7px">今天</button>
+        ${["10月29日 周三", "10月28日 周二", "10月27日 周一", "10月24日 周五", "10月23日 周四"].map(d => `<div class="dd-row" style="padding:7px 8px">${d}</div>`).join("")}
+        <div class="dd-row dd-mute">更早…</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0"><div class="chat">${chatHTML()}</div>${composer}</div>
+      <div style="width:250px;border-left:1px solid var(--line);padding:12px;overflow-y:auto">
+        <b>待办</b>${todoList(t => !t.done)}<button class="add" data-add>＋ 新增待办</button>
+        <div class="section-h">今天的事情</div>
+        ${S.things.map(t => `<div style="display:flex;gap:6px;font-size:12px;padding:3px 0"><span style="width:6px;border-radius:3px;background:${t.color}"></span><span style="flex:1">${t.name}</span><span class="dd-mute">${t.min}分</span></div>`).join("")}
+      </div></div></div>`,
+
+  // NOTIFY
+  "notify.A": () => `<div style="width:min(1100px,100%);display:flex;justify-content:flex-end">
+    <div class="notif"><div class="app">T</div><div style="flex:1"><div style="display:flex;justify-content:space-between"><b>Think My Day</b><span class="dd-mute">现在</span></div>
+      <div>发现新工作：<b>排查 M0b 探测程序</b>（已持续 14 分钟）</div><div>加入待办吗？</div>
+      <div class="acts"><button class="pri" data-notif="add">加入</button><button data-notif="no">不用</button></div></div></div></div>`,
+  "notify.B": () => `<div class="menubar"><span>🔋</span><span class="icon">TMD ●</span><span>周四 13:24</span>
+    <div class="dropdown" style="width:300px;padding:12px">
+      <div class="dd-mute" style="font-size:12px">发现新工作 · 已持续 14 分钟</div>
+      <div style="font-size:15px;font-weight:600;margin:4px 0 10px">排查 M0b 探测程序</div>
+      <div style="display:flex;gap:8px"><button class="big" style="flex:1;font-size:13px;padding:7px" data-notif="add">加入待办</button><button class="ghost" style="flex:1" data-notif="no">不用</button></div>
+      <div class="dd-mute" style="font-size:11px;margin-top:8px">只在菜单栏图标旁弹出，几秒后自动收起；不进通知中心</div>
+    </div></div>`,
+};
+
+const HINTS = {
+  menu: "点菜单栏图标后出现的下拉。数据：今天 10:32 开启，记录中。",
+  start: "点「开启一天」后的面板。可以勾待办、新增待办。",
+  review: "复盘窗口。可以在输入框里回答，AI 会用预设的话回复；「展开依据」看 AI 凭的是哪些记录；勾待办会同步到所有界面。",
+  notify: "白天整理发现新工作时的打断方式。点「加入」会把它加进待办，切到其他界面能看到。",
+};
+
+// ---------- render ----------
+function render() {
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = Object.entries(SURFACES).map(([k, s]) => `<button class="tab ${k === surface ? "on" : ""}" data-s="${k}">${s.label}</button>`).join("");
+  tabs.querySelectorAll("[data-s]").forEach(b => b.onclick = () => setView(b.dataset.s, "A"));
+  document.getElementById("hint").textContent = "原型 · 假数据 · 不保存。" + HINTS[surface];
+
+  const stage = document.getElementById("stage");
+  stage.innerHTML = "";
+  const node = h(V[`${surface}.${variant}`]());
+  stage.appendChild(node);
+  wireTodos(stage); wireChat(stage);
+  stage.querySelectorAll("[data-step]").forEach(b => b.onclick = () => { S.step = +b.dataset.step; render(); });
+  stage.querySelectorAll("[data-drawer]").forEach(b => b.onclick = () => { S.drawer = !S.drawer; render(); });
+  stage.querySelectorAll("[data-thing]").forEach(b => b.onclick = () => {
+    const t = S.things[b.dataset.thing];
+    const input = stage.querySelector(".composer input");
+    input.value = `${t.from}–${t.to}「${t.name}」那段：`; input.focus();
+  });
+  stage.querySelectorAll("[data-notif]").forEach(b => b.onclick = () => {
+    if (b.dataset.notif === "add" && !S.todos.some(t => t.name === "排查 M0b 探测程序"))
+      S.todos.unshift({ id: Date.now(), name: "排查 M0b 探测程序", days: 1, src: "ai", done: false });
+    S.notifAnswered = b.dataset.notif; render();
+  });
+
+  const vs = SURFACES[surface].variants;
+  const keys = Object.keys(vs);
+  document.getElementById("lbl").textContent = `${SURFACES[surface].label} · ${variant}（${vs[variant]}）  ${keys.indexOf(variant) + 1}/${keys.length}`;
+  const open = S.todos.filter(t => !t.done).map(t => t.name).join("、");
+  document.getElementById("state").textContent =
+    `state · ${surface}=${variant}\n未完成待办：${open || "无"}\n对话条数：${S.chat.length}${S.notifAnswered ? `\n新工作询问：${S.notifAnswered === "add" ? "已加入" : "不用"}` : ""}`;
+  document.getElementById("state").style.whiteSpace = "pre-wrap";
+}
+render();
+</script>
+</body>
+</html>
