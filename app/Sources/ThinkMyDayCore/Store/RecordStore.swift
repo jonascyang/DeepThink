@@ -40,14 +40,36 @@ public actor RecordStore {
     /// Appends one event and applies it. Throws, and writes nothing, if the event is invalid.
     @discardableResult
     public func append(_ event: Event) throws -> Int64 {
+        try db.transaction { try insert(event) }
+    }
+
+    /// Appends several events atomically: all of them or none.
+    public func append(_ events: [Event]) throws {
         try db.transaction {
-            try db.run("INSERT INTO events (at, day_id, kind, payload) VALUES (?, ?, ?, ?)",
-                       [.double(event.at.timeIntervalSince1970), .text(event.dayID.uuidString), .text(event.kind), .blob(try event.payload())])
-            let id = db.lastInsertRowID
-            try Self.apply(event, id: id, db)
-            try Self.setCursor(id, db)
-            return id
+            for event in events { _ = try insert(event) }
         }
+    }
+
+    /// 开启一天. A day the user forgot to end closes at this same moment, in the same transaction.
+    /// Returns the new day and, if there was one, the day that was closed.
+    @discardableResult
+    public func startDay(at now: Date, plannedStart: PlannedStart?) throws -> (started: ReviewDay, ended: ReviewDay?) {
+        let open = try openDay()
+        let day = ReviewDay(startedAt: now, plannedStart: plannedStart?.occurrence(near: now))
+        var events: [Event] = []
+        if let open { events.append(.dayEnded(dayID: open.id, at: now)) }
+        events.append(.dayStarted(day))
+        try append(events)
+        return (day, open.map { var d = $0; d.endedAt = now; return d })
+    }
+
+    /// 结束一天. Returns the day that was ended, or nil if none was open.
+    @discardableResult
+    public func endDay(at now: Date) throws -> ReviewDay? {
+        guard var open = try openDay() else { return nil }
+        try append(.dayEnded(dayID: open.id, at: now))
+        open.endedAt = now
+        return open
     }
 
     /// Applies any events the projections have not seen yet.
@@ -101,6 +123,16 @@ public actor RecordStore {
 
     // MARK: - Projection
 
+    /// Writes the event and applies it. Callers wrap this in a transaction.
+    private func insert(_ event: Event) throws -> Int64 {
+        try db.run("INSERT INTO events (at, day_id, kind, payload) VALUES (?, ?, ?, ?)",
+                   [.double(event.at.timeIntervalSince1970), .text(event.dayID.uuidString), .text(event.kind), .blob(try event.payload())])
+        let id = db.lastInsertRowID
+        try Self.apply(event, id: id, db)
+        try Self.setCursor(id, db)
+        return id
+    }
+
     private static func catchUp(_ db: SQLiteConnection) throws {
         let cursor = try db.query("SELECT event_id FROM cursors WHERE name = ?", [.text(projection)]).first?.first?.int ?? 0
         let pending = try db.query("SELECT id, kind, payload FROM events WHERE id > ? ORDER BY id", [.int(cursor)])
@@ -127,7 +159,10 @@ public actor RecordStore {
             guard row[0] == .null else { throw StoreError.dayAlreadyEnded(dayID) }
             try db.run("UPDATE review_days SET ended_at = ? WHERE id = ?", [.double(at.timeIntervalSince1970), .text(dayID.uuidString)])
         case .recordCaptured(let r):
-            // The foreign key rejects a record for a day that was never started.
+            // Records exist only inside an open 复盘日 (PRD §5.2): nothing before 开启一天 or after 结束一天.
+            let rows = try db.query("SELECT ended_at FROM review_days WHERE id = ?", [.text(r.dayID.uuidString)])
+            guard let row = rows.first else { throw StoreError.dayNotFound(r.dayID) }
+            guard row[0] == .null else { throw StoreError.dayAlreadyEnded(r.dayID) }
             try db.run("INSERT INTO records (id, day_id, at, kind, body, event_id) VALUES (?, ?, ?, ?, ?, ?)",
                        [.text(r.id.uuidString), .text(r.dayID.uuidString), .double(r.at.timeIntervalSince1970),
                         .text(r.kind), .blob(r.body), .int(id)])

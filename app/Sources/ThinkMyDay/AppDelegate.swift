@@ -3,7 +3,7 @@ import OSLog
 import ServiceManagement
 import ThinkMyDayCore
 
-/// Menu-bar shell. 开启一天 and the record status arrive with #5; this holds the store, permissions and login item.
+/// Menu-bar shell: 开启一天 / 结束一天, record status, permissions and login item.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -11,6 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private(set) var store: RecordStore?
     private var storeError: String?
     private var chromeState: PermissionState = .unknown("检查中…")
+    private let panels = PanelPresenter()
+    private var openDay: ReviewDay?
+    private var lastDay: ReviewDay?
+    private var statusTimer: Timer?
 
     private let log = Logger(subsystem: "com.jonascyang.thinkmyday", category: "app")
 
@@ -23,7 +27,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         log.notice("launched; accessibility \(Permissions.accessibility().label, privacy: .public), screen recording \(Permissions.screenRecording().label, privacy: .public)")
 
-        statusItem.button?.image = NSImage(systemSymbolName: "circle", accessibilityDescription: "Think My Day：未开启")
         menu.delegate = self
         menu.autoenablesItems = false
         statusItem.menu = menu
@@ -32,6 +35,87 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Requesting once is what adds the app to the Screen Recording list in System Settings.
         if Permissions.screenRecording() != .granted { Permissions.requestScreenRecording() }
         refreshChrome(ask: false)
+
+        Task { await reloadDays() }
+        // The ✓ of an ended day turns back into ○ when the calendar day changes.
+        statusTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in
+            Task { @MainActor in self.updateIcon() }
+        }
+        if Settings.plannedStart == nil { showPlannedStart() }
+    }
+
+    // MARK: - 复盘日
+
+    private var status: DayStatus {
+        DayStatus.current(open: openDay, last: lastDay, plan: Settings.plannedStart, now: Date())
+    }
+
+    private func reloadDays() async {
+        guard let store else { return updateIcon() }
+        do {
+            openDay = try await store.openDay()
+            lastDay = try await store.days().last
+        } catch {
+            log.error("reading days failed: \(error, privacy: .public)")
+        }
+        updateIcon()
+    }
+
+    private func updateIcon() {
+        let (symbol, label) = switch status {
+        case .notStarted: ("circle", "未开启")
+        case .recording: ("circle.fill", "记录中")
+        case .ended: ("checkmark.circle", "已结束")
+        }
+        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Think My Day：\(label)")
+    }
+
+    private func statusLine() -> String {
+        let plan = Settings.plannedStart
+        switch status {
+        case .recording(let day):
+            let since = day.startedAt.formatted(date: .omitted, time: .shortened)
+            let comparison = day.plannedStart.map { "（\(PlanComparison.text(start: day.startedAt, planned: $0))）" } ?? ""
+            return "记录中 · \(since) 开启\(comparison)"
+        case .ended(let day):
+            let range = [day.startedAt, day.endedAt ?? Date()].map { $0.formatted(date: .omitted, time: .shortened) }
+            return "今天已结束（\(range[0])–\(range[1])）"
+        case .notStarted(let late?):
+            return "未开启 · 比计划晚了 \(PlanComparison.duration(late))"
+        case .notStarted(nil):
+            return plan.map { "未开启 · 计划 \($0.clockText) 开始" } ?? "未开启"
+        }
+    }
+
+    @objc private func showStartDay() {
+        guard let store else { return }
+        let plan = Settings.plannedStart
+        let unfinished = openDay
+        panels.show(title: "开启一天") { close in
+            StartDayView(plannedStart: plan, unfinished: unfinished, start: { [weak self] in
+                let (day, ended) = try await store.startDay(at: Date(), plannedStart: plan)
+                if let ended { self?.log.notice("day \(ended.id, privacy: .public) closed by the next 开启一天") }
+                await self?.reloadDays()
+                return day
+            }, close: close)
+        }
+    }
+
+    @objc private func endDay() {
+        guard let store else { return }
+        Task {
+            do { try await store.endDay(at: Date()) } catch { log.error("ending day failed: \(error, privacy: .public)") }
+            await reloadDays()
+        }
+    }
+
+    @objc private func showPlannedStart() {
+        panels.show(title: "计划开始时刻") { close in
+            PlannedStartView(current: Settings.plannedStart, save: { [weak self] plan in
+                Settings.plannedStart = plan
+                self?.updateIcon()
+            }, close: close)
+        }
     }
 
     // MARK: - Menu
@@ -42,6 +126,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let version = "\(info?["CFBundleShortVersionString"] as? String ?? "dev") (\(info?["CFBundleVersion"] as? String ?? "dev"))"
         menu.addItem(disabled("Think My Day \(version)"))
         if let storeError { menu.addItem(disabled("记录库打不开：\(storeError)")) }
+
+        menu.addItem(.separator())
+        menu.addItem(disabled(statusLine()))
+        let dayItem = if case .recording = status {
+            NSMenuItem(title: "结束一天", action: #selector(endDay), keyEquivalent: "")
+        } else {
+            NSMenuItem(title: "开启一天…", action: #selector(showStartDay), keyEquivalent: "")
+        }
+        dayItem.target = self
+        dayItem.isEnabled = store != nil
+        menu.addItem(dayItem)
+        let planItem = NSMenuItem(title: "计划开始时刻：\(Settings.plannedStart?.clockText ?? "未设置")…",
+                                  action: #selector(showPlannedStart), keyEquivalent: "")
+        planItem.target = self
+        menu.addItem(planItem)
 
         menu.addItem(.separator())
         menu.addItem(disabled("系统授权"))

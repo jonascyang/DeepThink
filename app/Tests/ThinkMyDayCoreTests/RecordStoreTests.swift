@@ -52,7 +52,7 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
     @Test func invalidEventWritesNothing() async throws {
         let store = try RecordStore(url: tempURL())
         let orphan = Record(dayID: UUID(), at: Date(), kind: "windowText", body: Data())
-        await #expect(throws: SQLiteError.self) { try await store.append(.recordCaptured(orphan)) }
+        await #expect(throws: StoreError.dayNotFound(orphan.dayID)) { try await store.append(.recordCaptured(orphan)) }
         await #expect(throws: StoreError.dayNotFound(day.id)) { try await store.append(.dayEnded(dayID: day.id, at: Date())) }
         #expect(try await store.eventCount() == 0)
 
