@@ -27,8 +27,18 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: retentionKey) }
     }
 
+    private static let blockListKey = "blockList"
+
+    /// 不看名单. Starts with the presets; after that it is whatever the user left, carried from day to day.
+    static var blockList: BlockList {
+        get {
+            UserDefaults.standard.data(forKey: blockListKey).flatMap { try? JSONDecoder().decode(BlockList.self, from: $0) } ?? .presets
+        }
+        set { UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: blockListKey) }
+    }
+
     static var captureOptions: Capturer.Options {
-        Capturer.Options(ocrEnabled: ocrEnabled, idleThreshold: TimeInterval(idleMinutes * 60))
+        Capturer.Options(ocrEnabled: ocrEnabled, idleThreshold: TimeInterval(idleMinutes * 60), blockList: blockList)
     }
 
     static var plannedStart: PlannedStart? {

@@ -32,12 +32,14 @@ struct StartDayView: View {
     let plannedStart: PlannedStart?
     /// A day the user forgot to end; starting closes it.
     let unfinished: ReviewDay?
+    @ObservedObject var blockList: BlockListModel
     let start: () async throws -> ReviewDay
     let close: () -> Void
 
     @State private var started: ReviewDay?
     @State private var error: String?
     @State private var working = false
+    @State private var editingBlockList = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -56,7 +58,18 @@ struct StartDayView: View {
                     Text("计划 \(plannedStart.clockText) 开始").foregroundStyle(.secondary)
                 }
                 section("待办", "待办区在之后的版本加入。")
-                section("不看名单", "不看名单在之后的版本加入。")
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("不看名单").font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Button(editingBlockList ? "完成" : "修改…") { editingBlockList.toggle() }.buttonStyle(.link)
+                    }
+                    if editingBlockList {
+                        BlockListView(model: blockList)
+                    } else {
+                        Text("沿用上次：\(blockList.summary)").font(.callout).foregroundStyle(.secondary)
+                    }
+                }
                 if let unfinished {
                     Text("上一个复盘日（\(unfinished.startedAt.formatted(date: .abbreviated, time: .shortened)) 开启）还没结束，开启后它会在此刻结束。")
                         .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -80,7 +93,7 @@ struct StartDayView: View {
             }
         }
         .padding(20)
-        .frame(width: 360)
+        .frame(width: editingBlockList ? 420 : 360)
     }
 
     private func section(_ title: String, _ note: String) -> some View {

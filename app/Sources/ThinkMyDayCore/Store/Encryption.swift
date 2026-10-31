@@ -41,6 +41,14 @@ public struct KeychainKeyStore: KeyStore {
     }
 }
 
+/// A key in a file next to the database, for development tools and scratch stores. Never for real records.
+public struct FileKeyStore: KeyStore {
+    public let file: URL
+    public init(file: URL) { self.file = file }
+    public func load() throws -> Data? { try? Data(contentsOf: file) }
+    public func save(_ key: Data) throws { try key.write(to: file, options: .withoutOverwriting) }
+}
+
 /// A key kept in memory, for tests.
 public final class InMemoryKeyStore: KeyStore, @unchecked Sendable {
     private let lock = NSLock()

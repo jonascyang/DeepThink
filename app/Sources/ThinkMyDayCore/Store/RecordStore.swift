@@ -41,6 +41,14 @@ public actor RecordStore {
         return dir.appendingPathComponent("thinkmyday.sqlite")
     }
 
+    /// The Keychain, or for development with $TMD_DATA_DIR set, a key file inside that directory.
+    public static func defaultKeys() -> KeyStore {
+        if ProcessInfo.processInfo.environment["TMD_DATA_DIR"] != nil {
+            return FileKeyStore(file: defaultURL().appendingPathExtension("key"))
+        }
+        return KeychainKeyStore()
+    }
+
     public var schemaVersion: Int {
         get throws { Int(try db.query("PRAGMA user_version").first?.first?.int ?? 0) }
     }

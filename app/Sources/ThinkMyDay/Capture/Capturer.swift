@@ -9,6 +9,7 @@ final class Capturer: @unchecked Sendable {
     struct Options: Sendable {
         var ocrEnabled = true
         var idleThreshold: TimeInterval = 180
+        var blockList = BlockList.presets
     }
 
     private let queue = DispatchQueue(label: "thinkmyday.capture", qos: .utility)
@@ -22,6 +23,8 @@ final class Capturer: @unchecked Sendable {
     private var ocrBudget = OCRBudget()
     private var ocrPending: Set<CGWindowID> = []
     private var unreadable: Set<CGWindowID> = []
+    /// Windows currently left unread, so the placeholder is written once per stretch, not every sample.
+    private var hidden: [CGWindowID: Gap.Reason] = [:]
     private var flagged: Set<pid_t> = []
     private var lastFocus: Focus?
     private var trusted: Bool?
@@ -34,11 +37,6 @@ final class Capturer: @unchecked Sendable {
 
     /// Below this many visible characters a window counts as unreadable by accessibility and goes to OCR.
     static let ocrThreshold = 50
-    /// Password managers stay unread until the 不看名单 (#8) takes over.
-    static let passwordManagers: Set<String> = [
-        "com.1password.1password", "com.agilebits.onepassword7", "com.bitwarden.desktop",
-        "com.lastpass.LastPass", "com.apple.Passwords", "com.apple.keychainaccess", "com.dashlane.dashlanephonefinal",
-    ]
 
     init(store: RecordStore) {
         let (stream, continuation) = AsyncStream.makeStream(of: Record.self)
@@ -62,6 +60,7 @@ final class Capturer: @unchecked Sendable {
             self.history.reset()
             self.lastFocus = nil
             self.unreadable = []
+            self.hidden = [:]
             self.trusted = nil
         }
         trigger()
@@ -119,25 +118,55 @@ final class Capturer: @unchecked Sendable {
         }
         guard isTrusted else { return }
 
+        let windows = Windows.visible().filter { $0.visibleFraction >= 0.05 }
+        func tab(_ bundleID: String, _ bounds: CGRect?) -> Chrome.Tab? {
+            guard bundleID == Permissions.chromeBundleID, let bounds else { return nil }
+            return Chrome.tab(for: bounds, in: chromeTabs)
+        }
+        func decide(_ bundleID: String, _ tab: Chrome.Tab?) -> ReadDecision {
+            PrivacyRules.decide(bundleID: bundleID, browserURL: tab?.url, incognito: tab?.incognito ?? false, blockList: options.blockList)
+        }
+
         let focused = Windows.focused()
         if let focused {
-            let title = focused.window.flatMap { AX.attr($0, kAXTitleAttribute) as? String }
-            let focus = Focus(windowID: focused.id, bundleID: focused.app.bundleIdentifier ?? "unknown",
-                              appName: focused.app.localizedName ?? "", title: title)
-            if focus != lastFocus, !Self.passwordManagers.contains(focus.bundleID) {
+            let bundleID = focused.app.bundleIdentifier ?? "unknown"
+            let focusedTab = tab(bundleID, windows.first { $0.id == focused.id }?.bounds)
+            let focus: Focus
+            switch decide(bundleID, focusedTab) {
+            case .blocked: focus = .hidden(windowID: focused.id, reason: .blocked)
+            case .neverRead: focus = .hidden(windowID: focused.id, reason: .neverRead)
+            case .read:
+                // A Chrome window we could not match to a tab might be incognito, so its title is not kept.
+                let title = bundleID == Permissions.chromeBundleID && focusedTab == nil
+                    ? nil : focusedTab?.title ?? focused.window.flatMap { AX.attr($0, kAXTitleAttribute) as? String }
+                focus = Focus(windowID: focused.id, bundleID: bundleID, appName: focused.app.localizedName ?? "", title: title)
+            }
+            if focus != lastFocus {
                 lastFocus = focus
                 write(.focus, focus)
             }
         }
 
-        let windows = Windows.visible().filter { $0.visibleFraction >= 0.05 }
         var axByPid: [pid_t: [CGWindowID: AXUIElement]] = [:]
         for w in windows {
             let app = NSRunningApplication(processIdentifier: w.pid)
             let bundleID = app?.bundleIdentifier ?? "unknown"
-            if Windows.systemOverlays.contains(bundleID) || Self.passwordManagers.contains(bundleID) { continue }
-            let tab = bundleID == Permissions.chromeBundleID ? Chrome.tab(for: w.bounds, in: chromeTabs) : nil
-            if tab?.incognito == true { continue }
+            if Windows.systemOverlays.contains(bundleID) { continue }
+            let tab = tab(bundleID, w.bounds)
+
+            // 不看名单 and never-read windows: one placeholder, no title, no text, no accessibility call at all.
+            switch decide(bundleID, tab) {
+            case .read:
+                hidden[w.id] = nil
+            case let decision:
+                let reason: Gap.Reason = decision == .blocked ? .blocked : .neverRead
+                if hidden[w.id] != reason {
+                    hidden[w.id] = reason
+                    history.forget(window: w.id)
+                    write(.gap, Gap(reason: reason, windowID: w.id))
+                }
+                continue
+            }
 
             if !flagged.contains(w.pid) {
                 flagged.insert(w.pid)

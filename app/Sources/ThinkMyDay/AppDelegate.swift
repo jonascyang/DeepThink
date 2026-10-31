@@ -17,13 +17,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusTimer: Timer?
     private var purgeTimer: Timer?
     private var capturer: Capturer?
+    private lazy var blockList = BlockListModel(list: Settings.blockList) { [weak self] list in
+        Settings.blockList = list
+        self?.capturer?.update(options: Settings.captureOptions)
+    }
     private var triggers: CaptureTriggers?
 
     private let log = Logger(subsystem: "com.jonascyang.thinkmyday", category: "app")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
-            let store = try RecordStore(url: RecordStore.defaultURL())
+            let store = try RecordStore(url: RecordStore.defaultURL(), keys: RecordStore.defaultKeys())
             self.store = store
             let capturer = Capturer(store: store)
             self.capturer = capturer
@@ -113,7 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let plan = Settings.plannedStart
         let unfinished = openDay
         panels.show(title: "开启一天") { close in
-            StartDayView(plannedStart: plan, unfinished: unfinished, start: { [weak self] in
+            StartDayView(plannedStart: plan, unfinished: unfinished, blockList: blockList, start: { [weak self] in
                 let (day, ended) = try await store.startDay(at: Date(), plannedStart: plan)
                 if let ended { self?.log.notice("day \(ended.id, privacy: .public) closed by the next 开启一天") }
                 await self?.reloadDays()
@@ -127,6 +131,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Task {
             do { try await store.endDay(at: Date()) } catch { log.error("ending day failed: \(error, privacy: .public)") }
             await reloadDays()
+        }
+    }
+
+    @objc private func showBlockList() {
+        panels.show(title: "不看名单") { close in
+            BlockListPanel(model: blockList, close: close)
         }
     }
 
@@ -209,6 +219,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                   action: #selector(showPlannedStart), keyEquivalent: "")
         planItem.target = self
         menu.addItem(planItem)
+        let blockItem = NSMenuItem(title: "不看名单：\(blockList.summary)…", action: #selector(showBlockList), keyEquivalent: "")
+        blockItem.target = self
+        menu.addItem(blockItem)
 
         menu.addItem(.separator())
         menu.addItem(disabled("系统授权"))

@@ -128,3 +128,46 @@ private func group(_ children: [ElementSnapshot], role: String = "AXGroup", fram
         #expect(try record.decode(WindowText.self) == body)
     }
 }
+
+@Suite struct PrivacyRuleTests {
+    let list = BlockList(apps: [BlockList.App(bundleID: "cmb.pb", name: "招商银行")])
+
+    @Test func blockedAppsAreNotRead() {
+        #expect(PrivacyRules.decide(bundleID: "cmb.pb", browserURL: nil, incognito: false, blockList: list) == .blocked)
+        #expect(PrivacyRules.decide(bundleID: "com.apple.Notes", browserURL: nil, incognito: false, blockList: list) == .read)
+    }
+
+    @Test func incognitoIsNeverRead() {
+        #expect(PrivacyRules.decide(bundleID: "com.google.Chrome", browserURL: "https://example.com/", incognito: true, blockList: list) == .neverRead)
+    }
+
+    @Test func walletAndPasswordExtensionPagesAreNeverRead() {
+        let metaMask = "chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html#unlock"
+        let bitwarden = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/popup/index.html"
+        for url in [metaMask, bitwarden, "moz-extension://abc/popup.html"] {
+            #expect(PrivacyRules.decide(bundleID: "com.google.Chrome", browserURL: url, incognito: false, blockList: list) == .neverRead)
+        }
+        #expect(PrivacyRules.decide(bundleID: "com.google.Chrome", browserURL: "https://metamask.io/", incognito: false, blockList: list) == .read)
+    }
+
+    @Test func neverReadCannotBeOverriddenByAnEmptyList() {
+        #expect(PrivacyRules.decide(bundleID: "com.google.Chrome", browserURL: nil, incognito: true, blockList: BlockList(apps: [])) == .neverRead)
+    }
+
+    @Test func listEdits() {
+        var list = BlockList.presets
+        #expect(list.contains("com.1password.1password"))
+        list.remove("com.1password.1password")
+        #expect(!list.contains("com.1password.1password"))
+        list.add(BlockList.App(bundleID: "com.tencent.xinWeChat", name: "微信"))
+        list.add(BlockList.App(bundleID: "com.tencent.xinWeChat", name: "微信"))
+        #expect(list.apps.filter { $0.bundleID == "com.tencent.xinWeChat" }.count == 1)
+    }
+
+    @Test func hiddenFocusCarriesNoIdentity() throws {
+        let record = try Record(dayID: UUID(), at: Date(), kind: .focus, body: Focus.hidden(windowID: 9, reason: .blocked))
+        let text = String(decoding: record.body, as: UTF8.self)
+        #expect(!text.contains("cmb") && text.contains("blocked"))
+        #expect(try record.decode(Focus.self).hidden == .blocked)
+    }
+}

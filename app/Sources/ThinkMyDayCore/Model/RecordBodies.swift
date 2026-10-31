@@ -46,17 +46,26 @@ public struct WindowText: Codable, Sendable, Equatable {
 }
 
 /// The window the user is operating changed, or its title did.
+/// For a window that must not be read, only `hidden` is set and the app and title stay empty.
 public struct Focus: Codable, Sendable, Equatable {
     public var windowID: UInt32?
     public var bundleID: String
     public var appName: String
     public var title: String?
+    public var hidden: Gap.Reason?
 
     public init(windowID: UInt32?, bundleID: String, appName: String, title: String?) {
         self.windowID = windowID
         self.bundleID = bundleID
         self.appName = appName
         self.title = title
+    }
+
+    /// Focus moved into a window on the 不看名单 or one that is never read.
+    public static func hidden(windowID: UInt32?, reason: Gap.Reason) -> Focus {
+        var focus = Focus(windowID: windowID, bundleID: "", appName: "", title: nil)
+        focus.hidden = reason
+        return focus
     }
 }
 
@@ -68,6 +77,10 @@ public struct Gap: Codable, Sendable, Equatable {
         case readFailed
         /// Accessibility returned almost nothing and OCR was off, not permitted, rate-limited or failed.
         case unreadable
+        /// The app is on the 不看名单. Nothing else about the window is kept.
+        case blocked
+        /// A window that is never read: incognito, or a browser extension page such as a wallet.
+        case neverRead
     }
 
     public var reason: Reason
