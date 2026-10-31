@@ -18,6 +18,7 @@ final class Sampler {
     private var lastLines: [CGWindowID: Set<Int>] = [:]
     private var flaggedApps: [pid_t: String] = [:]
     private var lastCompareOCR = Date.distantPast
+    private var dumped: Set<String> = []
 
     static let systemOverlays: Set<String> = ["com.apple.WindowManager", "com.apple.controlcenter", "com.apple.notificationcenterui"]
     static let chromiumBundles: Set<String> = [
@@ -101,6 +102,12 @@ final class Sampler {
                 o.axNodes = r.nodes
                 o.axMs = (r.ms * 10).rounded() / 10
                 o.truncated = r.truncated
+                if let dir = ProcessInfo.processInfo.environment["M0B_DUMP_DIR"], !dumped.contains(bundle) || (r.visibleChars > 20000 && !dumped.contains(bundle + ".big")) {
+                    dumped.insert(r.visibleChars > 20000 ? bundle + ".big" : bundle)
+                    let header = "window \(Int(w.bounds.minX)),\(Int(w.bounds.minY)) \(Int(w.bounds.width))x\(Int(w.bounds.height)) visibleChars=\(r.visibleChars)\n"
+                    try? (header + AXReader.dumpStructure(window: axWin)).write(toFile: dir + "/tree-\(bundle)\(r.visibleChars > 20000 ? "-big" : "").txt", atomically: true, encoding: .utf8)
+                }
+                o.diag = [r.textElems, r.rangeElems, r.rangeShort, r.frameOutside, r.noFrame, r.cappedElems]
 
                 let hashes = Set(r.lines.map { $0.hashValue })
                 let previous = lastLines[w.id] ?? []

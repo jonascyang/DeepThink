@@ -23,6 +23,7 @@ struct WindowObs: Codable {
     var flagApplied: String?
     /// Reason the window was not read, e.g. "password-manager".
     var skipped: String?
+    var diag: [Int]?
 }
 
 struct SampleRec: Codable {

@@ -72,4 +72,4 @@ SIGN_IDENTITY="ThinkMyDay Local Signing" ./scripts/build-app.sh
 ## 注意
 
 - 探测程序会给 Chrome 和 Electron 应用打开辅助功能开关（`AXManualAccessibility`，不行时改用 `AXEnhancedUserInterface`）。少数应用的窗口动画可能因此异常，重启那个应用即可恢复。
-- 开发用的开关：`M0B_SMOKE_SECONDS=N` 运行 N 秒后自动生成报告并退出，期间不请求任何授权、不碰 Chrome；`M0B_DATA_DIR=路径` 把数据写到别的目录。
+- 开发用的开关：`M0B_SMOKE_SECONDS=N` 运行 N 秒后自动生成报告并退出，期间不请求任何授权、不碰 Chrome；`M0B_DATA_DIR=路径` 把数据写到别的目录；`open --env M0B_DUMP_DIR=路径 …app` 把每个 App 窗口的元素结构（只有角色、位置和字数，没有文字）导出到该目录，用来排查可见性规则。
