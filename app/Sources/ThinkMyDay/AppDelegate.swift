@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var storeError: String?
     private var chromeState: PermissionState = .unknown("检查中…")
     private let panels = PanelPresenter()
+    private let timeline = TimelineWindowController()
     private var openDay: ReviewDay?
     private var lastDay: ReviewDay?
     private var statusTimer: Timer?
@@ -59,6 +60,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             Task { @MainActor in self.updateIcon() }
         }
         if Settings.plannedStart == nil { showPlannedStart() }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let capturer else { return .terminateNow }
+        Task {
+            await capturer.finish()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     // MARK: - 复盘日
@@ -132,6 +142,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             do { try await store.endDay(at: Date()) } catch { log.error("ending day failed: \(error, privacy: .public)") }
             await reloadDays()
         }
+    }
+
+    @objc private func showTimeline() {
+        guard let store else { return }
+        timeline.show(store: store)
     }
 
     @objc private func showBlockList() {
@@ -219,6 +234,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                   action: #selector(showPlannedStart), keyEquivalent: "")
         planItem.target = self
         menu.addItem(planItem)
+        let timelineItem = NSMenuItem(title: "原始时间线…", action: #selector(showTimeline), keyEquivalent: "t")
+        timelineItem.target = self
+        timelineItem.isEnabled = store != nil
+        menu.addItem(timelineItem)
         let blockItem = NSMenuItem(title: "不看名单：\(blockList.summary)…", action: #selector(showBlockList), keyEquivalent: "")
         blockItem.target = self
         menu.addItem(blockItem)

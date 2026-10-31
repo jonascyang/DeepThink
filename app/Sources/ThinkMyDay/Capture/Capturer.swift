@@ -15,6 +15,7 @@ final class Capturer: @unchecked Sendable {
     private let queue = DispatchQueue(label: "thinkmyday.capture", qos: .utility)
     private let log = Logger(subsystem: "com.jonascyang.thinkmyday", category: "capture")
     private let writes: AsyncStream<Record>.Continuation
+    private let store: RecordStore
 
     // Queue-confined state.
     private var dayID: UUID?
@@ -41,6 +42,7 @@ final class Capturer: @unchecked Sendable {
     static let ocrThreshold = 50
 
     init(store: RecordStore) {
+        self.store = store
         let (stream, continuation) = AsyncStream.makeStream(of: Record.self)
         writes = continuation
         let log = self.log
@@ -66,8 +68,22 @@ final class Capturer: @unchecked Sendable {
             self.unmatched = []
             self.layouts.reset()
             self.trusted = nil
+            self.write(.presence, Presence(state: .recordingStarted, since: Date()))
         }
         trigger()
+    }
+
+    /// At quit: writes 停止记录 straight to the store and waits for it, so the timeline can tell a normal quit
+    /// from a crash. (Ending the day needs no such record; the day's end time says it.)
+    func finish() async {
+        let dayID: UUID? = queue.sync {
+            let id = self.dayID
+            self.dayID = nil
+            return id
+        }
+        guard let dayID, let record = try? Record(dayID: dayID, at: Date(), kind: .presence,
+                                                  body: Presence(state: .recordingStopped, since: Date())) else { return }
+        do { try await store.append(.recordCaptured(record)) } catch { log.error("stop record failed: \(error, privacy: .public)") }
     }
 
     func stop() { queue.async { self.dayID = nil; self.history.reset() } }
@@ -85,7 +101,7 @@ final class Capturer: @unchecked Sendable {
             switch state {
             case .asleep, .locked: self.paused = true
             case .awake, .unlocked: self.paused = false
-            case .idle, .active: break
+            case .idle, .active, .recordingStarted, .recordingStopped: break
             }
             self.write(.presence, Presence(state: state, since: Date()))
         }

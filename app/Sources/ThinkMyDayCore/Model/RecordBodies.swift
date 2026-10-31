@@ -103,6 +103,9 @@ public struct Gap: Codable, Sendable, Equatable {
 public struct Presence: Codable, Sendable, Equatable {
     public enum State: String, Codable, Sendable {
         case idle, active, asleep, awake, locked, unlocked
+        /// The app began or stopped reading for an open day: at 开启一天, at launch, at quit.
+        /// A start without a stop before it means the app did not exit normally.
+        case recordingStarted, recordingStopped
     }
 
     public var state: State
