@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// The kinds of 记录 the capture layer writes. Each kind has a Codable body stored in `Record.body`.
@@ -7,6 +8,50 @@ public enum RecordKind: String, Sendable {
     case gap
     case presence
     case layout
+    case activity
+    case file
+}
+
+/// Where a window sits: which screen (0-based, -1 off screen) and which part of it.
+public struct Place: Codable, Sendable, Equatable {
+    public enum Side: String, Codable, Sendable {
+        /// At least three quarters of the screen width.
+        case full
+        case left, right, center
+    }
+
+    public var screen: Int
+    public var side: Side
+    public var frame: CGRect
+
+    public init(screen: Int, side: Side, frame: CGRect) {
+        self.screen = screen
+        self.side = side
+        self.frame = frame
+    }
+
+    public init(frame: CGRect, screens: [CGRect]) {
+        let index = Layout.screen(for: frame, in: screens)
+        self.init(screen: index, side: index >= 0 ? Self.side(of: frame, on: screens[index]) : .center, frame: frame)
+    }
+
+    static func side(of frame: CGRect, on screen: CGRect) -> Side {
+        if frame.width >= screen.width * 0.75 { return .full }
+        let centre = (frame.midX - screen.minX) / screen.width
+        return centre < 0.4 ? .left : centre > 0.6 ? .right : .center
+    }
+
+    /// "屏幕 1 左"
+    public var label: String {
+        guard screen >= 0 else { return "屏幕外" }
+        let side = switch self.side {
+        case .full: "整屏"
+        case .left: "左"
+        case .right: "右"
+        case .center: "中"
+        }
+        return "屏幕 \(screen + 1) \(side)"
+    }
 }
 
 public enum ReadMethod: String, Codable, Sendable {
@@ -29,9 +74,11 @@ public struct WindowText: Codable, Sendable, Equatable {
     public var visibleChars: Int
     /// The read stopped at its node or time budget, so some text may be missing.
     public var truncated: Bool
+    public var place: Place?
 
     public init(windowID: UInt32, bundleID: String, appName: String, title: String?, focused: Bool, method: ReadMethod,
-                url: String? = nil, added: [String], lineCount: Int, visibleChars: Int, truncated: Bool) {
+                url: String? = nil, added: [String], lineCount: Int, visibleChars: Int, truncated: Bool, place: Place? = nil) {
+        self.place = place
         self.windowID = windowID
         self.bundleID = bundleID
         self.appName = appName
@@ -47,24 +94,26 @@ public struct WindowText: Codable, Sendable, Equatable {
 }
 
 /// The window the user is operating changed, or its title did.
-/// For a window that must not be read, only `hidden` is set and the app and title stay empty.
+/// For a window that must not be read, `hidden` is set and only the app is kept, never the title (#12).
 public struct Focus: Codable, Sendable, Equatable {
     public var windowID: UInt32?
     public var bundleID: String
     public var appName: String
     public var title: String?
     public var hidden: Gap.Reason?
+    public var place: Place?
 
-    public init(windowID: UInt32?, bundleID: String, appName: String, title: String?) {
+    public init(windowID: UInt32?, bundleID: String, appName: String, title: String?, place: Place? = nil) {
         self.windowID = windowID
         self.bundleID = bundleID
         self.appName = appName
         self.title = title
+        self.place = place
     }
 
     /// Focus moved into a window on the 不看名单 or one that is never read.
-    public static func hidden(windowID: UInt32?, reason: Gap.Reason) -> Focus {
-        var focus = Focus(windowID: windowID, bundleID: "", appName: "", title: nil)
+    public static func hidden(windowID: UInt32?, reason: Gap.Reason, bundleID: String, appName: String, place: Place? = nil) -> Focus {
+        var focus = Focus(windowID: windowID, bundleID: bundleID, appName: appName, title: nil, place: place)
         focus.hidden = reason
         return focus
     }
@@ -78,7 +127,7 @@ public struct Gap: Codable, Sendable, Equatable {
         case readFailed
         /// Accessibility returned almost nothing and OCR was off, not permitted, rate-limited or failed.
         case unreadable
-        /// The app is on the 不看名单. Nothing else about the window is kept.
+        /// The app is on the 不看名单. Only the app is kept: no title, no text.
         case blocked
         /// A window that is never read: incognito, or a browser extension page such as a wallet.
         case neverRead

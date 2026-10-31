@@ -11,7 +11,9 @@ struct ScreenWindow: Sendable {
 }
 
 enum Windows {
-    static let systemOverlays: Set<String> = ["com.apple.WindowManager", "com.apple.controlcenter", "com.apple.notificationcenterui"]
+    static let systemOverlays: Set<String> = ["com.apple.WindowManager", "com.apple.controlcenter", "com.apple.notificationcenterui", "com.apple.dock"]
+    /// Same, by process name, for system processes that report no bundle id (Stage Manager shows up as "WindowManager").
+    static let systemOverlayOwners: Set<String> = ["WindowManager", "Dock", "Control Center", "Notification Center", "Window Server"]
 
     /// Normal-layer windows on screen, front to back, excluding this process; each with its visible share.
     static func visible() -> [ScreenWindow] {

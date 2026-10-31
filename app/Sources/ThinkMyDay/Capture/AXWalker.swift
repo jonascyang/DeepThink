@@ -50,7 +50,7 @@ enum AXWalker {
 
     private static let names: [String] = [
         kAXRoleAttribute, kAXSubroleAttribute, kAXValueAttribute, kAXTitleAttribute,
-        kAXChildrenAttribute, kAXPositionAttribute, kAXSizeAttribute, kAXVisibleCharacterRangeAttribute,
+        kAXChildrenAttribute, kAXPositionAttribute, kAXSizeAttribute, kAXVisibleCharacterRangeAttribute, kAXFocusedAttribute,
     ]
 
     static func read(window: AXUIElement, windowFrame: CGRect, budget: Budget = Budget()) -> Result {
@@ -76,6 +76,7 @@ enum AXWalker {
             if snap.isSecure { return snap }
             snap.value = val(2) as? String
             snap.title = val(3) as? String
+            snap.focused = (val(8) as? Bool) ?? false
             if let rv = val(7), CFGetTypeID(rv) == AXValueGetTypeID() {
                 var range = CFRange()
                 if AXValueGetValue(rv as! AXValue, .cfRange, &range) { snap.visibleRange = NSRange(location: range.location, length: range.length) }

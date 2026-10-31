@@ -20,6 +20,7 @@ let package = Package(
                 .linkedFramework("ServiceManagement"),
                 .linkedFramework("ScreenCaptureKit"),
                 .linkedFramework("Vision"),
+                .linkedLibrary("sqlite3"),
             ]
         ),
         // Development tool: writes records in a loop so scripts/crash-test.sh can kill it mid-write.

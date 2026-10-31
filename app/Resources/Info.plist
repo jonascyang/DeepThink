@@ -21,6 +21,6 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Think My Day 读取 Chrome 各窗口当前标签页的网址和标题，作为当天的记录。</string>
+    <string>Think My Day 读取 Chrome 各窗口当前标签页的网址和标题，以及访达窗口所在的文件夹和选中的文件，作为当天的记录。</string>
 </dict>
 </plist>

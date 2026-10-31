@@ -164,11 +164,11 @@ private func group(_ children: [ElementSnapshot], role: String = "AXGroup", fram
         #expect(list.apps.filter { $0.bundleID == "com.tencent.xinWeChat" }.count == 1)
     }
 
-    @Test func hiddenFocusCarriesNoIdentity() throws {
-        let record = try Record(dayID: UUID(), at: Date(), kind: .focus, body: Focus.hidden(windowID: 9, reason: .blocked))
-        let text = String(decoding: record.body, as: UTF8.self)
-        #expect(!text.contains("cmb") && text.contains("blocked"))
-        #expect(try record.decode(Focus.self).hidden == .blocked)
+    @Test func hiddenFocusKeepsTheAppButNoTitle() throws {
+        let record = try Record(dayID: UUID(), at: Date(), kind: .focus,
+                                body: Focus.hidden(windowID: 9, reason: .blocked, bundleID: "cmb.pb", appName: "招商银行"))
+        let focus = try record.decode(Focus.self)
+        #expect(focus.hidden == .blocked && focus.appName == "招商银行" && focus.title == nil)
     }
 }
 
@@ -223,4 +223,97 @@ private func group(_ children: [ElementSnapshot], role: String = "AXGroup", fram
 private final class TrackerBox {
     var tracker = LayoutTracker()
     func changed(_ layout: Layout) -> Bool { tracker.changed(layout) }
+}
+
+@Suite struct PlaceTests {
+    let screens = [CGRect(x: 0, y: 0, width: 1512, height: 982), CGRect(x: 1512, y: 0, width: 2560, height: 1440)]
+
+    @Test func sidesOnOneScreenAndAcrossTwo() {
+        #expect(Place(frame: CGRect(x: 0, y: 30, width: 756, height: 950), screens: screens).label == "屏幕 1 左")
+        #expect(Place(frame: CGRect(x: 756, y: 30, width: 756, height: 950), screens: screens).label == "屏幕 1 右")
+        #expect(Place(frame: CGRect(x: 0, y: 30, width: 1512, height: 950), screens: screens).label == "屏幕 1 整屏")
+        #expect(Place(frame: CGRect(x: 2400, y: 200, width: 800, height: 900), screens: screens).label == "屏幕 2 中")
+        #expect(Place(frame: CGRect(x: -3000, y: 0, width: 400, height: 300), screens: screens).label == "屏幕外")
+    }
+}
+
+@Suite struct ActivityTests {
+    let t0 = Date(timeIntervalSince1970: 1_793_400_000)
+
+    private func sample(_ id: UInt32, focused: Bool = false, typed: Int = 0, cleared: Int = 0, content: Int = 0, scrolls: Int = 0) -> ActivitySample {
+        var s = ActivitySample(windowID: id, bundleID: "app.\(id)", appName: "App \(id)", place: nil)
+        s.focused = focused
+        s.typed = typed
+        s.cleared = cleared
+        s.contentAdded = content
+        s.scrolls = scrolls
+        return s
+    }
+
+    /// Type and send in ChatGPT, switch to Chrome while the reply arrives, come back and scroll, then sit still.
+    @Test func typingWaitingReadingAndStillnessAreTellableApart() {
+        let tracker = ActivityBox()
+        var out: [Activity] = []
+        out += tracker.add([sample(1, focused: true, typed: 80)], 5, t0.addingTimeInterval(5))
+        out += tracker.add([sample(1, focused: true, typed: 40, cleared: 1)], 5, t0.addingTimeInterval(10))
+        out += tracker.add([sample(1, content: 900), sample(2, focused: true, scrolls: 3)], 20, t0.addingTimeInterval(30))
+        out += tracker.add([sample(1, focused: true, scrolls: 6)], 15, t0.addingTimeInterval(45))
+        out += tracker.add([sample(1, focused: true)], 20, t0.addingTimeInterval(65))
+        #expect(out.count == 2)
+        let chat = out.first { $0.windowID == 1 }!, browser = out.first { $0.windowID == 2 }!
+        #expect(chat.typedChars == 120 && chat.fieldCleared == 1)
+        #expect(chat.contentAddedChars == 900, "the reply grew while focus was elsewhere")
+        #expect(chat.focusedSeconds == 45 && chat.scrollSeconds == 15 && chat.stillSeconds == 20)
+        #expect(browser.focusedSeconds == 20 && browser.scrollSeconds == 20 && browser.stillSeconds == 0)
+        #expect(chat.from == t0 && chat.to == t0.addingTimeInterval(65))
+    }
+
+    @Test func emptyBucketsAreDropped() {
+        let tracker = ActivityBox()
+        #expect(tracker.add([sample(1)], 60, t0.addingTimeInterval(60)).isEmpty)
+    }
+
+    @Test func fieldLengthBecomesTypedDeletedCleared() {
+        var f = FieldTracker()
+        do { let r = f.update(window: 1, length: 0); #expect(r == (0, 0, 0)) }
+        do { let r = f.update(window: 1, length: 12); #expect(r == (12, 0, 0)) }
+        do { let r = f.update(window: 1, length: 9); #expect(r == (0, 3, 0)) }
+        do { let r = f.update(window: 1, length: nil); #expect(r == (0, 0, 0)) }
+        do { let r = f.update(window: 1, length: 0); #expect(r == (0, 9, 1)) }
+        // Sent, then the field shows its placeholder instead of nothing.
+        do { let r = f.update(window: 1, length: 40); #expect(r == (40, 0, 0)) }
+        do { let r = f.update(window: 1, length: 6); #expect(r == (0, 34, 1)) }
+        do { let r = f.update(window: 1, length: 3); #expect(r == (0, 3, 0)) }
+    }
+
+    @Test func filesAreRecordedWhenTheyAppear() {
+        var h = OpenedFileHistory()
+        do { let r = h.new(window: 1, files: [(.finderFolder, "/Users/a/Downloads"), (.finderSelection, "/Users/a/Downloads/a.png")]); #expect(r.count == 2) }
+        do { let r = h.new(window: 1, files: [(.finderFolder, "/Users/a/Downloads"), (.finderSelection, "/Users/a/Downloads/a.png")]); #expect(r.isEmpty) }
+        do { let r = h.new(window: 1, files: [(.finderFolder, "/Users/a/Downloads"), (.finderSelection, "/Users/a/Downloads/b.png")]); #expect(r.map(\.1) == ["/Users/a/Downloads/b.png"]) }
+    }
+}
+
+private final class ActivityBox {
+    var tracker = ActivityTracker(bucket: 60)
+    func add(_ s: [ActivitySample], _ seconds: TimeInterval, _ now: Date) -> [Activity] { tracker.add(s, seconds: seconds, now: now) }
+}
+
+@Suite struct FocusedFieldTests {
+    @Test func findsTheFocusedEditableField() {
+        var field = ElementSnapshot(role: "AXTextArea", value: "你好，帮我看看")
+        field.focused = true
+        let tree = ElementSnapshot(role: "AXWindow", children: [
+            ElementSnapshot(role: "AXGroup", children: [ElementSnapshot(role: "AXStaticText", value: "回复")]),
+            ElementSnapshot(role: "AXGroup", children: [field]),
+        ])
+        #expect(tree.focusedFieldLength == 7)
+        #expect(ElementSnapshot(role: "AXWindow", children: [ElementSnapshot(role: "AXTextArea", value: "x")]).focusedFieldLength == nil)
+    }
+
+    @Test func passwordFieldsDoNotCount() {
+        var secure = ElementSnapshot(role: "AXTextField", subrole: "AXSecureTextField", value: "secret")
+        secure.focused = true
+        #expect(ElementSnapshot(role: "AXWindow", children: [secure]).focusedFieldLength == nil)
+    }
 }

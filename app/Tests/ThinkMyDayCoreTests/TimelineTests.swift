@@ -35,14 +35,40 @@ import Testing
         #expect(entries[3].style == .content)
     }
 
-    @Test func hiddenWindowsShowNothingButThePlaceholder() throws {
+    @Test func hiddenWindowsShowOnlyTheApp() throws {
         let entries = Timeline.entries([
-            try record(0, .gap, Gap(reason: .blocked, windowID: 9)),
-            try record(1, .focus, Focus.hidden(windowID: 9, reason: .blocked)),
-            try record(2, .gap, Gap(reason: .neverRead, windowID: 10)),
+            try record(0, .gap, Gap(reason: .blocked, bundleID: "cmb.pb", appName: "招商银行", windowID: 9)),
+            try record(1, .focus, Focus.hidden(windowID: 9, reason: .blocked, bundleID: "cmb.pb", appName: "招商银行")),
+            try record(2, .gap, Gap(reason: .neverRead, bundleID: "com.google.Chrome", appName: "Google Chrome", windowID: 10)),
         ])
-        #expect(entries.map(\.headline) == ["不看名单里的窗口", "焦点切到不看名单里的窗口", "永不读取的窗口"])
+        #expect(entries.map(\.headline) == ["不看名单里的窗口：招商银行", "焦点切到不看名单里的窗口：招商银行", "永不读取的窗口：Google Chrome"])
         #expect(entries.allSatisfy { $0.style == .hidden && $0.lines.isEmpty })
+    }
+
+    @Test func placeActivityAndFiles() throws {
+        let screens = [CGRect(x: 0, y: 0, width: 1512, height: 982)]
+        let left = Place(frame: CGRect(x: 0, y: 30, width: 756, height: 950), screens: screens)
+        var activity = Activity(windowID: 1, bundleID: "com.openai.codex", appName: "ChatGPT", place: left, from: t0, to: t0.addingTimeInterval(60))
+        activity.focusedSeconds = 45
+        activity.typedChars = 120
+        activity.fieldCleared = 1
+        activity.contentAddedChars = 900
+        activity.stillSeconds = 20
+        var file = OpenedFile(windowID: 2, bundleID: "com.apple.Preview", appName: "预览", source: .document,
+                              path: "/Users/a/Downloads/chart.png", name: "chart.png")
+        file.contentType = "public.png"
+        file.downloadedFrom = ["https://example.com/chart.png"]
+        let entries = Timeline.entries([
+            try record(0, .windowText, WindowText(windowID: 1, bundleID: "com.openai.codex", appName: "ChatGPT", title: nil, focused: true,
+                                                  method: .accessibility, added: ["hi"], lineCount: 1, visibleChars: 2, truncated: false, place: left)),
+            try record(60, .activity, activity),
+            try record(70, .file, file),
+        ])
+        #expect(entries.map(\.headline) == ["屏幕 1 左 · ChatGPT", "屏幕 1 左 · 操作 · ChatGPT", "打开的文件：chart.png"])
+        #expect(entries[1].time == t0)
+        #expect(entries[1].detail == "60 秒内 · 焦点 45 秒 · 输入 120 字 · 输入框清空 1 次 · 新内容 900 字 · 没有操作 20 秒")
+        #expect(entries[2].detail == "预览 · /Users/a/Downloads/chart.png · public.png · 下载自 https://example.com/chart.png")
+        #expect(entries.map(\.screen) == [0, 0, nil])
     }
 
     @Test func gapsAndAbsencesAreShownNotFilled() throws {

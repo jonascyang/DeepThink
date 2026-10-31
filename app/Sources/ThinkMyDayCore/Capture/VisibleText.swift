@@ -11,6 +11,8 @@ public struct ElementSnapshot: Sendable {
     public var frame: CGRect?
     /// AXVisibleCharacterRange, if the element reports one.
     public var visibleRange: NSRange?
+    /// AXFocused: this element has keyboard focus.
+    public var focused = false
     public var children: [ElementSnapshot]
 
     public init(role: String, subrole: String = "", value: String? = nil, title: String? = nil,
@@ -26,6 +28,17 @@ public struct ElementSnapshot: Sendable {
 
     /// Password fields are never read, and neither is anything inside them.
     public var isSecure: Bool { role == "AXSecureTextField" || subrole == "AXSecureTextField" }
+
+    /// Length of the text field that has keyboard focus inside this tree, if any. Used for typing counts (#14).
+    public var focusedFieldLength: Int? {
+        var stack = [self]
+        while let el = stack.popLast() {
+            if el.isSecure { continue }
+            if el.focused, VisibleText.editableRoles.contains(el.role) || el.role == "AXSearchField" { return el.value?.count ?? 0 }
+            stack.append(contentsOf: el.children)
+        }
+        return nil
+    }
 }
 
 public struct ExtractedText: Sendable, Equatable {
@@ -40,7 +53,7 @@ public struct ExtractedText: Sendable, Equatable {
 /// Decides which text in a window is on screen. Every rule here comes from the M0b probe (docs/M0b-探测报告.md §3.1).
 public enum VisibleText {
     public static let clipRoles: Set<String> = ["AXScrollArea", "AXWebArea"]
-    static let editableRoles: Set<String> = ["AXTextArea", "AXTextField", "AXComboBox"]
+    public static let editableRoles: Set<String> = ["AXTextArea", "AXTextField", "AXComboBox"]
     static let titleRoles: Set<String> = ["AXStaticText", "AXHeading", "AXLink", "AXCell", "AXMenuItem", "AXButton", "AXTab", "AXRadioButton"]
 
     public static func extract(_ root: ElementSnapshot, windowFrame: CGRect) -> ExtractedText {

@@ -10,6 +10,9 @@ final class TimelineModel: ObservableObject {
     @Published private(set) var entries: [TimelineEntry] = []
     @Published private(set) var error: String?
     @Published var showLayout = false
+    @Published var showActivity = true
+    /// nil shows every screen; otherwise entries on that screen plus those that belong to no screen (sleep, lock…).
+    @Published var screen: Int?
 
     private let store: RecordStore
 
@@ -40,7 +43,13 @@ final class TimelineModel: ObservableObject {
     }
 
     var day: ReviewDay? { days.first { $0.id == selectedDay } }
-    var visibleEntries: [TimelineEntry] { showLayout ? entries : entries.filter { $0.style != .layout } }
+    var visibleEntries: [TimelineEntry] {
+        entries.filter { e in
+            (showLayout || e.style != .layout) && (showActivity || e.style != .activity) && (screen == nil || e.screen == nil || e.screen == screen)
+        }
+    }
+
+    var screens: [Int] { Array(Set(entries.compactMap(\.screen))).filter { $0 >= 0 }.sorted() }
 }
 
 struct TimelineView: View {
@@ -70,6 +79,17 @@ struct TimelineView: View {
             }
         }
         .toolbar {
+            ToolbarItem {
+                Picker("屏幕", selection: $model.screen) {
+                    Text("全部屏幕").tag(Int?.none)
+                    ForEach(model.screens, id: \.self) { Text("屏幕 \($0 + 1)").tag(Int?.some($0)) }
+                }
+                .help("只看一块屏幕上的记录")
+            }
+            ToolbarItem {
+                Toggle(isOn: $model.showActivity) { Label("显示操作", systemImage: "hand.tap") }
+                    .help("显示每分钟的输入、滚动、点击和没有操作的时间")
+            }
             ToolbarItem {
                 Toggle(isOn: $model.showLayout) { Label("显示布局", systemImage: "rectangle.split.2x1") }
                     .help("显示桌面布局的变化")
@@ -144,14 +164,16 @@ struct TimelineRow: View {
         case .gap: "exclamationmark.circle"
         case .hidden: "eye.slash"
         case .presence: "circle.dashed"
+        case .activity: "hand.tap"
+        case .file: "doc"
         }
     }
 
     private var tint: Color {
         switch entry.style {
         case .gap: .orange
-        case .hidden, .presence, .layout: .secondary
-        case .content, .focus: .accentColor
+        case .hidden, .presence, .layout, .activity: .secondary
+        case .content, .focus, .file: .accentColor
         }
     }
 }
