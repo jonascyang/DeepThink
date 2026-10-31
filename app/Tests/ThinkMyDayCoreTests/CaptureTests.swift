@@ -110,6 +110,22 @@ private func group(_ children: [ElementSnapshot], role: String = "AXGroup", fram
         do { let r = budget.take(window: 1, now: t.addingTimeInterval(30)); #expect(r) }
     }
 
+    @Test func ocrBudgetReadsAtOnceOnFocusAndSoonerOnChange() {
+        var budget = OCRBudget(perWindow: 30, global: 5, changed: 5)
+        let t = Date(timeIntervalSince1970: 0)
+        do { let r = budget.take(window: 1, now: t); #expect(r) }
+        // Focus ignores both limits.
+        do { let r = budget.take(window: 2, now: t.addingTimeInterval(1), reason: .focused); #expect(r) }
+        do { let r = budget.take(window: 1, now: t.addingTimeInterval(2), reason: .focused); #expect(r) }
+        // A change waits `changed` per window but not for other windows.
+        do { let r = budget.take(window: 1, now: t.addingTimeInterval(6), reason: .changed); #expect(!r) }
+        do { let r = budget.take(window: 2, now: t.addingTimeInterval(6), reason: .changed); #expect(r) }
+        do { let r = budget.take(window: 1, now: t.addingTimeInterval(7), reason: .changed); #expect(r) }
+        // With nothing happening the 30 s cap still holds.
+        do { let r = budget.take(window: 1, now: t.addingTimeInterval(20)); #expect(!r) }
+        do { let r = budget.take(window: 1, now: t.addingTimeInterval(37)); #expect(r) }
+    }
+
     @Test func idleIsDatedFromTheLastInput() {
         var tracker = IdleTracker(threshold: 180)
         let t = Date(timeIntervalSince1970: 1000)

@@ -23,6 +23,8 @@ final class Capturer: @unchecked Sendable {
     private var history = LineHistory()
     private var ocrBudget = OCRBudget()
     private var ocrPending: Set<CGWindowID> = []
+    /// Apps that posted an accessibility change since the last sample; their focused window may OCR before its 30 s.
+    private var changedPids: Set<pid_t> = []
     private var unreadable: Set<CGWindowID> = []
     /// Windows currently left unread, so the placeholder is written once per stretch, not every sample.
     private var hidden: [CGWindowID: Gap.Reason] = [:]
@@ -123,6 +125,11 @@ final class Capturer: @unchecked Sendable {
         if state == .unlocked || state == .awake { trigger() }
     }
 
+    /// The frontmost app reported a focus, title or value change.
+    func noteChange(pid: pid_t) {
+        queue.async { self.changedPids.insert(pid) }
+    }
+
     /// Takes a sample now unless one is running.
     func trigger() {
         let bundles = Set(Windows.visible().compactMap { NSRunningApplication(processIdentifier: $0.pid)?.bundleIdentifier })
@@ -145,6 +152,8 @@ final class Capturer: @unchecked Sendable {
     // MARK: - Sampling (on queue)
 
     private func sample(chromeTabs: [Chrome.Tab], finder: Finder.State) {
+        let changed = changedPids
+        changedPids = []
         guard dayID != nil, !paused else { return }
         let now = Date()
 
@@ -181,6 +190,7 @@ final class Capturer: @unchecked Sendable {
         var samples: [CGWindowID: ActivitySample] = [:]
 
         let focused = Windows.focused()
+        let focusGained = focused?.id != nil && focused?.id != lastFocus?.windowID
         if let focused {
             let bundleID = focused.app.bundleIdentifier ?? "unknown"
             let appName = focused.app.localizedName ?? ""
@@ -297,7 +307,8 @@ final class Capturer: @unchecked Sendable {
                 }
             }
             if text.visibleChars < Self.ocrThreshold, w.visibleFraction > 0.3 {
-                fallBackToOCR(window: w, body: body)
+                let reason: OCRBudget.Reason = !isFocused ? .periodic : focusGained ? .focused : changed.contains(w.pid) ? .changed : .periodic
+                fallBackToOCR(window: w, body: body, reason: reason)
                 continue
             }
             unreadable.remove(w.id)
@@ -333,10 +344,10 @@ final class Capturer: @unchecked Sendable {
         }
     }
 
-    private func fallBackToOCR(window w: ScreenWindow, body: WindowText) {
+    private func fallBackToOCR(window w: ScreenWindow, body: WindowText, reason: OCRBudget.Reason) {
         guard options.ocrEnabled, CGPreflightScreenCaptureAccess() else { return markUnreadable(w, body) }
         guard !ocrPending.contains(w.id) else { return }
-        guard ocrBudget.take(window: w.id, now: Date()) else { return }
+        guard ocrBudget.take(window: w.id, now: Date(), reason: reason) else { return }
         ocrPending.insert(w.id)
         Task.detached(priority: .utility) {
             let lines = await OCR.read(windowID: w.id, bounds: w.bounds)

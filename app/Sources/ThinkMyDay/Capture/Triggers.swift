@@ -89,7 +89,10 @@ final class CaptureTriggers {
         let callback: AXObserverCallback = { _, _, _, context in
             guard let context else { return }
             let triggers = Unmanaged<CaptureTriggers>.fromOpaque(context).takeUnretainedValue()
-            MainActor.assumeIsolated { triggers.schedule(after: CaptureTriggers.debounce) }
+            MainActor.assumeIsolated {
+                if let pid = triggers.observedPid { triggers.capturer.noteChange(pid: pid) }
+                triggers.schedule(after: CaptureTriggers.debounce)
+            }
         }
         guard AXObserverCreate(pid, callback, &created) == .success, let created else { return }
         let app = AXUIElementCreateApplication(pid)

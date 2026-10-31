@@ -30,22 +30,39 @@ public enum URLCleaner {
     }
 }
 
-/// OCR rate limit: each window at most once per `perWindow`, and any OCR at most once per `global`.
+/// OCR rate limit. A window that just got focus is read at once; one whose app reported a title or value change,
+/// at most once per `changed`; otherwise each window at most once per `perWindow`, and any OCR at most once per `global`.
 public struct OCRBudget: Sendable {
+    /// Why a window is up for OCR.
+    public enum Reason: Sendable {
+        /// The window became the focused one.
+        case focused
+        /// The focused window's app posted a title or value change since the last sample.
+        case changed
+        /// Nothing happened; the 5 s sample found the window still unreadable.
+        case periodic
+    }
+
     public var perWindow: TimeInterval = 30
     public var global: TimeInterval = 5
+    public var changed: TimeInterval = 5
     private var lastWindow: [UInt32: Date] = [:]
     private var lastAny = Date.distantPast
 
-    public init(perWindow: TimeInterval = 30, global: TimeInterval = 5) {
+    public init(perWindow: TimeInterval = 30, global: TimeInterval = 5, changed: TimeInterval = 5) {
         self.perWindow = perWindow
         self.global = global
+        self.changed = changed
     }
 
     /// Returns true and spends the budget, or false if OCR would run too often.
-    public mutating func take(window: UInt32, now: Date) -> Bool {
-        guard now.timeIntervalSince(lastAny) >= global,
-              now.timeIntervalSince(lastWindow[window] ?? .distantPast) >= perWindow else { return false }
+    public mutating func take(window: UInt32, now: Date, reason: Reason = .periodic) -> Bool {
+        let sinceWindow = now.timeIntervalSince(lastWindow[window] ?? .distantPast)
+        switch reason {
+        case .focused: break
+        case .changed: guard sinceWindow >= changed else { return false }
+        case .periodic: guard now.timeIntervalSince(lastAny) >= global, sinceWindow >= perWindow else { return false }
+        }
         lastAny = now
         lastWindow[window] = now
         return true
