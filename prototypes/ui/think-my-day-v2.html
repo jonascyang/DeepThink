@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="zh-CN" data-palette="ink" data-layout="sidebar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Think My Day 原型 v2</title>
+<style>
+/* 配色：每套只定义同一组变量，界面只用变量 */
+:root, [data-palette="mist"] {
+  --bg: #eef0f4; --window: #fbfbfc; --sidebar: #f3f4f7; --surface: #ffffff; --sunken: #f5f6f9;
+  --text: #1b2130; --muted: #687085; --faint: #9aa1b2; --line: rgba(27,33,48,.08); --line-strong: rgba(27,33,48,.14);
+  --accent: #4a5fc9; --accent-soft: rgba(74,95,201,.10); --live: #2f9e7a;
+  --c1: #4a5fc9; --c2: #c07a4f; --c3: #8a8fa3; --c4: #6c9a8b;
+  --shadow: 0 1px 2px rgba(20,24,36,.04), 0 12px 40px rgba(20,24,36,.10);
+}
+
+
+/* 主题：除了基础色，还定义首页状态卡（--hero-*）、标题字体（--display）和事情卡片的染色（--tint），让每套有自己的性格 */
+[data-palette="ink"] {
+  --bg: #e7e1d6; --window: #f6f2ea; --sidebar: #eee8dd; --surface: #fffdf8; --sunken: #efe9df;
+  --text: #1f2327; --muted: #6c675f; --faint: #a39d92; --line: rgba(31,35,39,.09); --line-strong: rgba(31,35,39,.16);
+  --accent: #d9572f; --accent-soft: rgba(217,87,47,.12); --live: #ff7a4d;
+  --hero-bg: #1f2327; --hero-text: #f6f2ea; --hero-muted: #a8a49b;
+  --c1: #d9572f; --c2: #2f7d78; --c3: #d9a441; --c4: #5c6b80; --tint: 7%;
+  --display: ui-serif, "New York", "Songti SC", Georgia, serif;
+  --shadow: 0 1px 2px rgba(40,30,20,.05), 0 18px 50px rgba(40,30,20,.14);
+}
+[data-palette="forest"] {
+  --bg: #e4e2d6; --window: #f4f1e6; --sidebar: #ebe7da; --surface: #fbf9f1; --sunken: #efebdf;
+  --text: #1d2a22; --muted: #646e5e; --faint: #9da391; --line: rgba(29,42,34,.09); --line-strong: rgba(29,42,34,.16);
+  --accent: #2f5d46; --accent-soft: rgba(47,93,70,.12); --live: #e9b44c;
+  --hero-bg: #24453a; --hero-text: #f4f1e6; --hero-muted: #a9bba9;
+  --c1: #2f5d46; --c2: #d39b35; --c3: #c4674a; --c4: #7d9fc0; --tint: 8%;
+  --display: ui-serif, "New York", "Songti SC", Georgia, serif;
+  --shadow: 0 1px 2px rgba(20,36,26,.05), 0 18px 50px rgba(20,36,26,.14);
+}
+[data-palette="klein"] {
+  --bg: #e9e8e2; --window: #f8f7f3; --sidebar: #f0efea; --surface: #ffffff; --sunken: #f2f1ec;
+  --text: #12152b; --muted: #5d6074; --faint: #9a9cab; --line: rgba(18,21,43,.08); --line-strong: rgba(18,21,43,.15);
+  --accent: #1f3fd1; --accent-soft: rgba(31,63,209,.10); --live: #ffd84d;
+  --hero-bg: #1f3fd1; --hero-text: #ffffff; --hero-muted: rgba(255,255,255,.74);
+  --c1: #1f3fd1; --c2: #ff6b57; --c3: #e8b923; --c4: #3fa98c; --tint: 7%;
+  --display: "Avenir Next", "SF Pro Display", -apple-system, sans-serif;
+  --shadow: 0 1px 2px rgba(18,21,43,.05), 0 18px 50px rgba(18,21,43,.14);
+}
+[data-palette="dusk"] {
+  --bg: #ece4e2; --window: #fbf7f5; --sidebar: #f4eeeb; --surface: #fffcfb; --sunken: #f6efec;
+  --text: #2a1f2e; --muted: #73667a; --faint: #ab9fae; --line: rgba(42,31,46,.08); --line-strong: rgba(42,31,46,.15);
+  --accent: #7b4bd6; --accent-soft: rgba(123,75,214,.10); --live: #ff7d4f;
+  --hero-bg: linear-gradient(130deg, #ffd6bd 0%, #f6b9cb 48%, #c9b8f5 100%); --hero-text: #2a1f2e; --hero-muted: #6a566c;
+  --c1: #7b4bd6; --c2: #f08a5d; --c3: #e06c9f; --c4: #5aa9c9; --tint: 7%;
+  --display: "Avenir Next", "SF Pro Display", -apple-system, sans-serif;
+  --shadow: 0 1px 2px rgba(42,31,46,.05), 0 18px 50px rgba(60,30,60,.14);
+}
+[data-palette="riso"] {
+  --bg: #e3dccd; --window: #f3eee2; --sidebar: #ebe5d7; --surface: #f9f5ec; --sunken: #ebe5d7;
+  --text: #1a1a1a; --muted: #5c574d; --faint: #978f80; --line: rgba(26,26,26,.13); --line-strong: rgba(26,26,26,.24);
+  --accent: #2e5bff; --accent-soft: rgba(46,91,255,.12); --live: #1a1a1a;
+  --hero-bg: #ff5a74; --hero-text: #1a1a1a; --hero-muted: rgba(26,26,26,.68);
+  --c1: #ff5a74; --c2: #2e5bff; --c3: #f5b928; --c4: #1f9e74; --tint: 10%;
+  --display: ui-monospace, "SF Mono", Menlo, monospace;
+  --shadow: 4px 4px 0 rgba(26,26,26,.9);
+}
+[data-palette="neon"] {
+  --bg: #08080c; --window: #111118; --sidebar: #0d0d13; --surface: #18181f; --sunken: #14141b;
+  --text: #ecebf4; --muted: #9a98ab; --faint: #5f5d70; --line: rgba(255,255,255,.07); --line-strong: rgba(255,255,255,.13);
+  --accent: #c8f560; --accent-soft: rgba(200,245,96,.12); --live: #c8f560; --on-accent: #0b0b10;
+  --hero-bg: radial-gradient(130% 150% at 0% 0%, #4a2fa8 0%, #1c1740 46%, #18181f 100%); --hero-text: #f4f3fb; --hero-muted: #aaa5cc;
+  --c1: #c8f560; --c2: #ff6fae; --c3: #4cc9f0; --c4: #ffb84d; --tint: 9%;
+  --display: "Avenir Next", "SF Pro Display", -apple-system, sans-serif;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 24px 70px rgba(0,0,0,.6);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 13px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  -webkit-font-smoothing: antialiased; min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; padding: 28px 16px 96px;
+  transition: background .4s ease;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+/* 窗口 */
+.window {
+  width: min(1180px, 100%); height: 760px; display: flex; overflow: hidden;
+  background: var(--window); border-radius: 14px; box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+}
+.sidebar {
+  scrollbar-width: none; width: 212px; flex: none; background: var(--sidebar); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; padding: 14px 12px;
+}
+.traffic { display: flex; gap: 8px; padding: 2px 6px 22px; }
+.traffic i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.traffic i:nth-child(1) { background: #ff5f57; } .traffic i:nth-child(2) { background: #febc2e; } .traffic i:nth-child(3) { background: #28c840; }
+.brand { white-space: nowrap; display: flex; align-items: center; gap: 9px; padding: 0 8px 18px; font-weight: 600; font-size: 14px; letter-spacing: .01em; }
+.brand-mark { width: 22px; height: 22px; border-radius: 7px; background: var(--hero-bg, var(--accent)); position: relative; }
+.brand-mark::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--live); }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav button {
+  white-space: nowrap; display: flex; align-items: center; gap: 10px; border: 0; background: none; text-align: left;
+  padding: 8px 10px; border-radius: 8px; color: var(--muted); transition: background .15s, color .15s;
+}
+.nav button:hover { background: var(--line); color: var(--text); }
+.nav button[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px var(--line-strong); font-weight: 500; }
+.nav svg { width: 16px; height: 16px; flex: none; }
+.nav .soon { margin-left: auto; font-size: 11px; color: var(--faint); }
+.side-status { margin-top: auto; padding: 12px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+.side-status .row { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.side-status .sub { color: var(--muted); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* 呼吸灯 */
+.live-dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--live); flex: none; animation: breathe 3.2s ease-in-out infinite; }
+.live-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--live); animation: halo 3.2s ease-out infinite; }
+.live-dot.big { width: 10px; height: 10px; }
+.live-dot.off { background: var(--faint); animation: none; }
+.live-dot.off::after { display: none; }
+.live-dot.focus { background: var(--accent); }
+.live-dot.focus::after { background: var(--accent); }
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+@keyframes halo { 0% { transform: scale(1); opacity: .45; } 70%, 100% { transform: scale(2.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .live-dot, .live-dot::after { animation: none; } .live-dot::after { display: none; } }
+
+/* 主区域 */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.page { display: none; flex: 1; min-height: 0; }
+.page.active { display: flex; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 26px 32px 18px; }
+.page-head h1 { font-family: var(--display, inherit); margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.page-head .date { color: var(--muted); margin-top: 2px; }
+.scroll { overflow-y: auto; min-height: 0; }
+.label { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--faint); text-transform: uppercase; margin: 0 0 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+
+.btn { white-space: nowrap; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px; padding: 7px 14px; font-weight: 500; transition: transform .1s, background .15s; }
+.btn:hover { background: var(--sunken); }
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--accent); border-color: transparent; color: var(--on-accent, #fff); }
+.btn.primary:hover { filter: brightness(1.06); background: var(--accent); }
+.btn.big { padding: 11px 26px; font-size: 14px; border-radius: 10px; }
+
+/* 首页 */
+#home { flex-direction: column; }
+.home-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; padding: 0 32px 32px; flex: 1; min-height: 0; }
+.home-left { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.hero { background: var(--hero-bg, var(--surface)); color: var(--hero-text, var(--text)); padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.hero-state { display: flex; align-items: center; gap: 8px; color: var(--hero-muted, var(--muted)); font-weight: 500; }
+.hero-time { font-family: var(--display, inherit); font-size: 40px; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.15; margin: 6px 0 4px; }
+.hero-sub { color: var(--hero-muted, var(--muted)); font-variant-numeric: tabular-nums; }
+.hero .btn:not(.primary) { background: color-mix(in srgb, var(--hero-text, var(--text)) 10%, transparent); border-color: color-mix(in srgb, var(--hero-text, var(--text)) 24%, transparent); color: var(--hero-text, var(--text)); }
+.hero-sub b { color: var(--hero-text, var(--text)); font-weight: 500; }
+.hero.idle { flex-direction: column; align-items: flex-start; }
+.now-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.thing { background: color-mix(in srgb, var(--tc) var(--tint, 0%), var(--surface)); padding: 16px 16px 14px; position: relative; overflow: hidden; transition: transform .2s, box-shadow .2s; }
+.thing:hover { transform: translateY(-1px); box-shadow: 0 6px 18px var(--line); }
+.thing::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--tc); }
+.thing-top { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.thing h3 { font-family: var(--display, inherit); margin: 8px 0 4px; font-size: 15px; font-weight: 600; letter-spacing: -.005em; }
+.thing .step { color: var(--muted); }
+.thing .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: var(--faint); font-size: 12px; }
+.thing .meta b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--sunken); color: var(--muted); border: 1px solid var(--line); }
+.recent { margin-top: 10px; display: flex; gap: 16px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+.recent span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--tc); margin-right: 6px; vertical-align: 1px; }
+.dist { padding: 18px 20px; }
+.dist-bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; gap: 2px; background: var(--sunken); }
+.dist-bar i { display: block; background: var(--tc); }
+.dist-bar i.away { background: repeating-linear-gradient(135deg, var(--line-strong) 0 3px, transparent 3px 6px); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend span::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--tc); }
+.legend span.away::before { background: var(--line-strong); }
+.legend b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.todos { padding: 18px 18px 12px; display: flex; flex-direction: column; min-height: 0; }
+.todo-add { display: flex; align-items: center; gap: 8px; border: 1px dashed var(--line-strong); border-radius: 9px; padding: 8px 10px; margin-bottom: 10px; color: var(--faint); }
+.todo-add input { flex: 1; border: 0; background: none; outline: none; min-width: 0; }
+.todo-add input::placeholder { color: var(--faint); }
+.todo-add:focus-within { border-style: solid; border-color: var(--accent); }
+.todo-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.todo { display: flex; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.todo:last-child { border-bottom: 0; }
+.check { width: 17px; height: 17px; border-radius: 50%; border: 1.5px solid var(--line-strong); background: none; flex: none; margin-top: 1px; padding: 0; display: grid; place-items: center; transition: background .15s, border-color .15s; }
+.check:hover { border-color: var(--accent); }
+.todo.done .check { background: var(--accent); border-color: var(--accent); }
+.todo.done .check::after { content: ""; width: 7px; height: 4px; border: 1.5px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+.todo.done .t { color: var(--faint); text-decoration: line-through; }
+.todo .t { line-height: 1.4; }
+.todo .d { font-size: 11px; color: var(--faint); margin-top: 2px; }
+.done-head { font-size: 12px; color: var(--faint); margin: 14px 4px 2px; }
+
+/* 复盘 */
+#review { flex-direction: column; }
+.seg { display: inline-flex; background: var(--sunken); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+.seg button { border: 0; background: none; padding: 5px 12px; border-radius: 7px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px var(--line-strong); font-weight: 500; }
+.custom-range { display: none; align-items: center; gap: 6px; margin-top: 8px; color: var(--muted); justify-content: flex-end; }
+.custom-range.show { display: flex; }
+.custom-range input { border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); padding: 4px 8px; }
+.review-body { display: grid; grid-template-columns: 1fr 280px; flex: 1; min-height: 0; border-top: 1px solid var(--line); }
+.chat { display: flex; flex-direction: column; min-height: 0; }
+.chat-scroll { flex: 1; padding: 24px 32px 12px; }
+.chat-inner { max-width: 660px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.msg-ai { line-height: 1.7; }
+.msg-ai .who { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--faint); margin-bottom: 4px; }
+.msg-ai .who i { width: 16px; height: 16px; border-radius: 5px; background: var(--accent); display: block; }
+.msg-user { align-self: flex-end; max-width: 78%; background: var(--accent-soft); padding: 9px 14px; border-radius: 14px 14px 4px 14px; }
+.mini-things { display: grid; gap: 8px; margin: 10px 0 4px; }
+.mini-thing { display: grid; grid-template-columns: 3px 1fr auto; gap: 12px; align-items: center; padding: 10px 14px 10px 0; background: color-mix(in srgb, var(--tc) var(--tint, 0%), var(--surface)); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.mini-thing::before { content: ""; align-self: stretch; background: var(--tc); }
+.mini-thing b { font-weight: 600; }
+.mini-thing .s { color: var(--muted); font-size: 12px; }
+.mini-thing .m { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-top: 8px; }
+.q p { margin: 0 0 10px; font-weight: 500; }
+.answers { display: flex; flex-wrap: wrap; gap: 6px; }
+.answers button { border: 1px solid var(--line-strong); background: var(--window); border-radius: 99px; padding: 5px 12px; transition: border-color .15s, background .15s; }
+.answers button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.answers.used button { opacity: .45; pointer-events: none; }
+.lesson { border: 1px solid var(--accent-soft); background: var(--accent-soft); border-radius: 12px; padding: 12px 16px; }
+.lesson .k { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--accent); }
+.composer { padding: 12px 32px 20px; }
+.composer-box { max-width: 660px; margin: 0 auto; display: flex; gap: 8px; align-items: center; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; padding: 8px 8px 8px 14px; }
+.composer-box input { flex: 1; border: 0; outline: none; background: none; min-width: 0; }
+.composer-box input::placeholder { color: var(--faint); }
+.review-side { border-left: 1px solid var(--line); padding: 22px 20px; background: var(--sidebar); }
+.side-block + .side-block { margin-top: 26px; }
+.bar-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; font-size: 12px; margin-bottom: 10px; }
+.bar-row .track { grid-column: 1 / -1; height: 4px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.bar-row .track i { display: block; height: 100%; background: var(--tc); border-radius: 99px; }
+.bar-row span:last-of-type { color: var(--muted); font-variant-numeric: tabular-nums; }
+.lessons { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lessons li { font-size: 12.5px; line-height: 1.5; padding-left: 12px; border-left: 2px solid var(--accent); }
+.lessons li small { display: block; color: var(--faint); font-size: 11px; margin-top: 2px; }
+
+/* 历史 */
+#history { flex-direction: column; }
+.days { display: flex; gap: 6px; padding: 0 32px 16px; overflow-x: auto; }
+.day { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 7px 0 6px; width: 56px; flex: none; text-align: center; color: var(--muted); }
+.day b { display: block; font-size: 16px; color: var(--text); font-weight: 500; }
+.day i { display: block; width: 4px; height: 4px; border-radius: 50%; margin: 4px auto 0; background: var(--accent); }
+.day.empty { opacity: .45; }
+.day.empty i { visibility: hidden; }
+.day[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.day-summary { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 16px 32px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--sidebar); }
+.day-summary div { color: var(--muted); font-size: 12px; }
+.day-summary b { display: block; color: var(--text); font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.history-tools { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px 6px; }
+.timeline { padding: 6px 32px 32px; }
+.tl { display: grid; grid-template-columns: 92px 14px 1fr; gap: 0 14px; }
+.tl-time { text-align: right; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; padding-top: 13px; }
+.tl-time small { display: block; color: var(--faint); }
+.tl-rail { position: relative; }
+.tl-rail::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.tl-rail i { position: absolute; left: 2px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 3px var(--window); }
+.tl-body { padding: 10px 0 14px; }
+.tl-card { padding: 12px 14px; }
+.tl-card h4 { margin: 0; font-size: 14px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.tl-card p { margin: 3px 0 0; color: var(--muted); }
+.tl-card .chips { margin-top: 8px; }
+.more { border: 0; background: none; color: var(--accent); padding: 6px 0 0; font-size: 12px; }
+.details { display: none; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.details.open { display: block; }
+.details li { list-style: none; display: grid; grid-template-columns: 44px 1fr; gap: 10px; font-size: 12.5px; padding: 3px 0; color: var(--muted); }
+.details li span:first-child { color: var(--faint); font-variant-numeric: tabular-nums; }
+.details li q { color: var(--text); }
+.details ul { margin: 0; padding: 0; }
+.tl.gap .tl-rail i { background: var(--window); border: 2px dashed var(--faint); box-shadow: none; }
+.tl.gap .tl-card { background: none; border: 1px dashed var(--line-strong); }
+.tl.gap h4 { font-weight: 500; color: var(--muted); }
+.tl.mark .tl-card { background: none; border: 0; padding: 4px 0; }
+.tl.mark h4 { font-weight: 500; color: var(--muted); font-size: 13px; }
+.by-thing { display: none; padding: 6px 32px 32px; gap: 12px; }
+.by-thing.show { display: grid; }
+.empty-day { padding: 60px 32px; text-align: center; color: var(--muted); }
+
+/* 设计选择面板（不属于 App） */
+.picker {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 16px;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 99px; box-shadow: var(--shadow); font-size: 12px; color: var(--muted);
+}
+.swatches { display: flex; gap: 4px; }
+.swatch { border: 1px solid transparent; background: none; border-radius: 99px; padding: 4px 10px 4px 6px; display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.swatch i { width: 14px; height: 14px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); background: linear-gradient(135deg, var(--b) 50%, var(--a) 50%); }
+.swatches { flex-wrap: wrap; justify-content: center; }
+.picker > span { white-space: nowrap; }
+.picker .sep { width: 1px; height: 18px; background: var(--line-strong); }
+.picker { width: max-content; max-width: calc(100% - 32px); flex-wrap: wrap; justify-content: center; border-radius: 18px; }
+.swatch { white-space: nowrap; }
+.swatch[aria-pressed="true"] { border-color: var(--line-strong); color: var(--text); background: var(--sunken); }
+
+/* 布局：sidebar 侧边栏（默认）/ top 顶部导航 + 居中单栏 / bento 图标栏 + 卡片拼贴。窄屏时都退回同一种布局 */
+.donut { display: none; }
+@media (min-width: 901px) {
+  [data-layout="top"] .window { flex-direction: column; }
+  [data-layout="top"] .sidebar { width: auto; flex-direction: row; align-items: center; gap: 16px; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+  [data-layout="top"] .traffic { padding: 0 6px 0 0; }
+  [data-layout="top"] .brand { padding: 0; }
+  [data-layout="top"] .nav { flex-direction: row; margin: 0 auto; background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; padding: 2px; }
+  [data-layout="top"] .nav button { padding: 5px 16px; }
+  [data-layout="top"] .nav .soon { display: none; }
+  [data-layout="top"] .side-status { margin-top: 0; padding: 6px 14px; display: flex; gap: 10px; align-items: center; border-radius: 99px; }
+  [data-layout="top"] .side-status .sub { margin: 0; }
+  [data-layout="top"] #home .page-head { justify-content: center; text-align: center; padding-top: 34px; }
+  [data-layout="top"] .home-grid { grid-template-columns: 1fr; width: 100%; max-width: 760px; margin: 0 auto; overflow-y: auto; align-content: start; padding-bottom: 80px; }
+  [data-layout="top"] .home-left { overflow: visible; }
+  [data-layout="top"] .hero, [data-layout="top"] .hero.idle { flex-direction: column; align-items: center; text-align: center; padding: 34px 24px 28px; }
+  [data-layout="top"] .hero-state { justify-content: center; }
+  [data-layout="top"] .hero-time { font-size: 64px; font-weight: 200; margin: 8px 0 6px; }
+
+  [data-layout="bento"] .sidebar { width: 68px; padding: 14px 10px; align-items: center; }
+  [data-layout="bento"] .traffic { gap: 6px; padding: 2px 0 22px; }
+  [data-layout="bento"] .brand { padding: 0 0 20px; }
+  [data-layout="bento"] .brand-t, [data-layout="bento"] .nav-t, [data-layout="bento"] .nav .soon,
+  [data-layout="bento"] [data-state-word], [data-layout="bento"] .side-status .sub { display: none; }
+  [data-layout="bento"] .nav button { justify-content: center; padding: 10px; }
+  [data-layout="bento"] .nav svg { width: 18px; height: 18px; }
+  [data-layout="bento"] .side-status { background: none; border: 0; padding: 10px; }
+  [data-layout="bento"] .home-grid { grid-template-columns: 1fr 1fr 300px; grid-template-rows: auto auto 1fr; overflow-y: auto; align-content: start; gap: 16px; }
+  [data-layout="bento"] .home-left { display: contents; }
+  [data-layout="bento"] .hero { grid-column: 1; grid-row: 1; flex-direction: column; align-items: flex-start; }
+  [data-layout="bento"] .hero-time { font-size: 46px; font-weight: 300; }
+  [data-layout="bento"] .dist { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: auto 1fr; gap: 0 20px; align-items: center; }
+  [data-layout="bento"] .dist .label { grid-column: 1 / -1; }
+  [data-layout="bento"] .dist-bar { display: none; }
+  [data-layout="bento"] .donut { display: block; width: 116px; height: 116px; border-radius: 50%;
+    background: conic-gradient(var(--c1) 0 45%, var(--c2) 45% 58%, var(--c3) 58% 60%, var(--line-strong) 60% 100%);
+    -webkit-mask: radial-gradient(circle, transparent 55%, #000 56%); mask: radial-gradient(circle, transparent 55%, #000 56%); }
+  [data-layout="bento"] .legend { flex-direction: column; margin: 0; gap: 8px; }
+  [data-layout="bento"] .home-left > div:not(.card) { grid-column: 1 / 3; grid-row: 2; }
+  [data-layout="bento"] .todos { grid-column: 3; grid-row: 1 / 4; }
+}
+
+@media (max-width: 900px) {
+  body { padding-top: 16px; }
+  .window { height: auto; min-height: 760px; flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 10px; gap: 8px; overflow-x: auto; }
+  .traffic, .side-status { display: none; }
+  .brand { padding: 0 8px; }
+  .nav { flex-direction: row; }
+  .nav .soon { display: none; }
+  .home-grid, .review-body { grid-template-columns: 1fr; padding-left: 16px; padding-right: 16px; }
+  .review-body { padding: 0; }
+  .review-side { border-left: 0; border-top: 1px solid var(--line); }
+  .now-list { grid-template-columns: 1fr; }
+  .page-head, .days, .history-tools, .timeline, .day-summary, .by-thing { padding-left: 16px; padding-right: 16px; }
+  .page-head { flex-direction: column; align-items: flex-start; }
+  .chat-scroll, .composer { padding-left: 16px; padding-right: 16px; }
+  .tl { grid-template-columns: 60px 14px 1fr; }
+  .picker { flex-wrap: wrap; border-radius: 14px; justify-content: center; width: calc(100% - 32px); }
+}
+</style>
+</head>
+<body>
+
+<div class="window">
+  <aside class="sidebar">
+    <div class="traffic"><i></i><i></i><i></i></div>
+    <div class="brand"><span class="brand-mark"></span><span class="brand-t">Think My Day</span></div>
+    <nav class="nav" aria-label="功能">
+      <button data-page="home" aria-current="page" title="今天">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 7.2 8 2.8l5.5 4.4V13a.5.5 0 0 1-.5.5H9.6V10H6.4v3.5H3a.5.5 0 0 1-.5-.5z" stroke-linejoin="round"/></svg><span class="nav-t">今天</span></button>
+      <button data-page="review" title="复盘">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 4a1.5 1.5 0 0 1 1.5-1.5h8A1.5 1.5 0 0 1 13.5 4v5.5A1.5 1.5 0 0 1 12 11H7l-3 2.5V11a1.5 1.5 0 0 1-1.5-1.5z" stroke-linejoin="round"/><path d="M5.5 6.8h5M5.5 8.6h3" stroke-linecap="round"/></svg><span class="nav-t">复盘</span></button>
+      <button data-page="history" title="历史">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.2l2 1.3" stroke-linecap="round"/></svg><span class="nav-t">历史</span></button>
+      <button disabled style="cursor:default" title="设置">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2"/><path d="M8 2.2v1.6M8 12.2v1.6M2.2 8h1.6M12.2 8h1.6M3.9 3.9 5 5M11 11l1.1 1.1M3.9 12.1 5 11M11 5l1.1-1.1" stroke-linecap="round"/></svg><span class="nav-t">设置</span><span class="soon">之后</span></button>
+    </nav>
+    <div class="side-status">
+      <div class="row"><span class="live-dot" data-live></span><span data-state-word>记录中</span></div>
+      <div class="sub" data-side-sub>已开启 1:20:00</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- 今天 -->
+    <section class="page active" id="home">
+      <header class="page-head">
+        <div><h1>晚上好，Jonas</h1><div class="date">10月31日 周六</div></div>
+      </header>
+      <div class="home-grid">
+        <div class="home-left scroll">
+          <div class="card hero" id="hero"></div>
+
+          <div>
+            <p class="label">正在并行</p>
+            <div class="now-list">
+              <article class="card thing" style="--tc: var(--c1)">
+                <div class="thing-top"><span class="live-dot focus"></span>正在操作 · 左半屏</div>
+                <h3>Think My Day：采集原理与复盘设计</h3>
+                <div class="step">做到：复盘方法写成文档，开始设计界面</div>
+                <div class="meta"><div class="chips"><span class="chip">Claude</span></div><span>今天 <b>45 分</b></span></div>
+              </article>
+              <article class="card thing" style="--tc: var(--c2)">
+                <div class="thing-top"><span class="live-dot"></span>AI 在后台处理 · 全屏</div>
+                <h3>《抵达之后》制作编排</h3>
+                <div class="step">做到：场景改成 9 处，还没出图</div>
+                <div class="meta"><div class="chips"><span class="chip">ChatGPT</span></div><span>今天 <b>11 分</b></span></div>
+              </article>
+            </div>
+            <div class="recent"><span style="--tc: var(--c3)">刚才 · 刷 X 2 分</span><span style="--tc: var(--c4)">刚才 · 看 Grok 理财日报</span></div>
+          </div>
+
+          <div class="card dist">
+            <p class="label">今天的时间</p>
+            <div class="donut"></div>
+            <div class="dist-bar">
+              <i style="--tc: var(--c1); flex: 45"></i><i style="--tc: var(--c2); flex: 13"></i><i style="--tc: var(--c3); flex: 2"></i><i class="away" style="flex: 40"></i>
+            </div>
+            <div class="legend">
+              <span style="--tc: var(--c1)">Think My Day <b>45 分</b></span>
+              <span style="--tc: var(--c2)">《抵达之后》 <b>13 分</b></span>
+              <span style="--tc: var(--c3)">刷 X <b>2 分</b></span>
+              <span class="away">离开 <b>40 分</b></span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="card todos">
+          <p class="label">待办</p>
+          <label class="todo-add">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10" stroke-linecap="round"/></svg>
+            <input id="todo-input" placeholder="添加待办，回车确认">
+          </label>
+          <ul class="todo-list" id="todos"></ul>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 复盘 -->
+    <section class="page" id="review">
+      <header class="page-head">
+        <div><h1>复盘</h1><div class="date" id="range-desc">10月31日 · 在电脑前 40 分 · 3 件事情</div></div>
+        <div>
+          <div class="seg" id="range">
+            <button aria-pressed="true" data-range="today">今天</button>
+            <button aria-pressed="false" data-range="yesterday">昨天</button>
+            <button aria-pressed="false" data-range="week">最近 7 天</button>
+            <button aria-pressed="false" data-range="custom">自定义</button>
+          </div>
+          <div class="custom-range" id="custom-range"><input type="date" value="2026-10-25"> 至 <input type="date" value="2026-10-31"></div>
+        </div>
+      </header>
+      <div class="review-body">
+        <div class="chat">
+          <div class="chat-scroll scroll"><div class="chat-inner" id="chat"></div></div>
+          <div class="composer">
+            <form class="composer-box" id="composer">
+              <input placeholder="回答、补充，或者问「这周我在《抵达之后》上花了多久」">
+              <button class="btn primary" type="submit">发送</button>
+            </form>
+          </div>
+        </div>
+        <aside class="review-side scroll">
+          <div class="side-block">
+            <p class="label">这段时间的事情</p>
+            <div id="side-things"></div>
+          </div>
+          <div class="side-block">
+            <p class="label">沉淀的经验</p>
+            <ul class="lessons" id="lessons">
+              <li>不熟悉的事，先问流程和每一步做完的标准，再让 AI 动手。<small>10月31日 ·《抵达之后》</small></li>
+              <li>先说出自己喜欢什么，再让 AI 动手。<small>10月31日 ·《抵达之后》</small></li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 历史 -->
+    <section class="page" id="history">
+      <header class="page-head">
+        <div><h1>历史</h1><div class="date">每一天发生了什么</div></div>
+        <div class="seg" id="view-mode">
+          <button aria-pressed="true" data-mode="time">按时间</button>
+          <button aria-pressed="false" data-mode="thing">按事情</button>
+        </div>
+      </header>
+      <div class="days" id="days"></div>
+      <div class="scroll" style="flex:1" id="history-content"></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="picker" role="group" aria-label="布局和配色">
+  <span>布局</span>
+  <div class="swatches" id="layouts">
+    <button class="swatch" data-l="sidebar" aria-pressed="true">A 侧边栏</button>
+    <button class="swatch" data-l="top" aria-pressed="false">B 顶部导航</button>
+    <button class="swatch" data-l="bento" aria-pressed="false">C 卡片拼贴</button>
+  </div>
+  <span class="sep"></span>
+  <span>配色</span>
+  <div class="swatches">
+    <button class="swatch" data-p="ink" aria-pressed="true"><i style="--b:#1f2327; --a:#d9572f"></i>墨柿</button>
+    <button class="swatch" data-p="forest" aria-pressed="false"><i style="--b:#24453a; --a:#e9b44c"></i>松烟</button>
+    <button class="swatch" data-p="klein" aria-pressed="false"><i style="--b:#1f3fd1; --a:#ffd84d"></i>克莱因</button>
+    <button class="swatch" data-p="dusk" aria-pressed="false"><i style="--b:#f6b9cb; --a:#7b4bd6"></i>暮色</button>
+    <button class="swatch" data-p="riso" aria-pressed="false"><i style="--b:#ff5a74; --a:#2e5bff"></i>孔版印刷</button>
+    <button class="swatch" data-p="neon" aria-pressed="false"><i style="--b:#4a2fa8; --a:#c8f560"></i>霓虹夜</button>
+    <button class="swatch" data-p="mist" aria-pressed="false"><i style="--b:#eef0f4; --a:#4a5fc9"></i>原来的雾蓝</button>
+  </div>
+</div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+
+// 配色
+$$('.swatch[data-p]').forEach(b => b.onclick = () => {
+  document.documentElement.dataset.palette = b.dataset.p;
+  $$('.swatch[data-p]').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+// 布局
+$$('.swatch[data-l]').forEach(b => b.onclick = () => {
+  document.documentElement.dataset.layout = b.dataset.l;
+  $$('.swatch[data-l]').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+
+// 导航
+function go(page) {
+  $$('.nav button[data-page]').forEach(b => b.dataset.page === page ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  $$('.page').forEach(p => p.classList.toggle('active', p.id === page));
+}
+$$('.nav button[data-page]').forEach(b => b.onclick = () => go(b.dataset.page));
+
+// 一天的状态：idle 未开启 / live 记录中 / ended 已结束
+const state = { day: 'live', start: Date.now() - (80 * 60) * 1000, end: null, startLabel: '20:19' };
+const pad = n => String(n).padStart(2, '0');
+const clock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; };
+const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+// 结束时刻从开启时刻加上已记录的时长算出，示例里的 20:19 开启不是真实时间
+const endLabel = () => { const [h, m] = state.startLabel.split(':').map(Number); const t = h * 60 + m + Math.round((state.end - state.start) / 60000); return `${pad(Math.floor(t / 60) % 24)}:${pad(t % 60)}`; };
+
+function renderHero() {
+  const hero = $('#hero');
+  hero.className = 'card hero' + (state.day === 'idle' ? ' idle' : '');
+  if (state.day === 'idle') {
+    hero.innerHTML = `
+      <div><div class="hero-state"><span class="live-dot off big"></span>今天还没开启</div>
+      <div class="hero-sub" style="margin-top:6px">计划 09:00 开始。开启之后才开始记录。</div></div>
+      <button class="btn primary big" id="start">开启一天</button>`;
+    $('#start').onclick = () => { state.day = 'live'; state.start = Date.now(); state.startLabel = hm(new Date()); state.end = null; tick(); };
+  } else {
+    const live = state.day === 'live';
+    const now = live ? Date.now() : state.end;
+    hero.innerHTML = `
+      <div>
+        <div class="hero-state"><span class="live-dot big ${live ? '' : 'off'}"></span>${live ? '记录中' : '今天已结束'}</div>
+        <div class="hero-time" data-clock>${clock(now - state.start)}</div>
+        <div class="hero-sub">${state.startLabel} 开启${live ? '' : ` · ${endLabel()} 结束`}${state.startLabel === '20:19' ? ' · 在电脑前 <b>40 分</b> · 离开 <b>40 分</b>' : ''}</div>
+      </div>
+      ${live ? '<button class="btn" id="end">结束一天</button>' : '<button class="btn primary" id="restart">开启新的一天</button>'}`;
+    if (live) $('#end').onclick = () => { state.day = 'ended'; state.end = Date.now(); tick(); };
+    else $('#restart').onclick = () => { state.day = 'idle'; tick(); };
+  }
+}
+function tick() {
+  const live = state.day === 'live';
+  const c = $('[data-clock]');
+  if (state.day !== (tick.last || '')) { renderHero(); tick.last = state.day; }
+  else if (c && live) c.textContent = clock(Date.now() - state.start);
+  $('[data-live]').classList.toggle('off', !live);
+  $('[data-state-word]').textContent = { idle: '未开启', live: '记录中', ended: '已结束' }[state.day];
+  $('[data-side-sub]').textContent = state.day === 'idle' ? '点「开启一天」开始' : state.day === 'live' ? `已开启 ${clock(Date.now() - state.start)}` : `${state.startLabel}–${endLabel()}`;
+}
+setInterval(tick, 1000); tick();
+
+// 待办
+const todos = [
+  { t: '《抵达之后》：定下每个镜头需要哪些图片', d: '第 3 天', done: false },
+  { t: 'Think My Day：修掉输入框和计时行的记录噪音', d: '今天', done: false },
+  { t: '回答「一年后想比现在强在哪」', d: '今天', done: false },
+  { t: 'OCR 改为按事件触发', d: '今天完成', done: true },
+];
+function renderTodos() {
+  const open = todos.filter(t => !t.done), done = todos.filter(t => t.done);
+  const row = t => `<li class="todo ${t.done ? 'done' : ''}"><button class="check" aria-label="${t.done ? '取消完成' : '完成'}" data-i="${todos.indexOf(t)}"></button><div><div class="t">${t.t}</div><div class="d">${t.d}</div></div></li>`;
+  $('#todos').innerHTML = open.map(row).join('') + (done.length ? `<li class="done-head">今天完成</li>` + done.map(row).join('') : '');
+  $$('#todos .check').forEach(b => b.onclick = () => { const t = todos[b.dataset.i]; t.done = !t.done; t.d = t.done ? '今天完成' : '今天'; renderTodos(); });
+}
+$('#todo-input').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing || !e.target.value.trim()) return;
+  todos.unshift({ t: e.target.value.trim(), d: '今天', done: false });
+  e.target.value = ''; renderTodos();
+});
+renderTodos();
+
+// 复盘
+const ranges = {
+  today: {
+    desc: '10月31日 · 在电脑前 40 分 · 3 件事情',
+    things: [['Think My Day：采集原理与复盘设计', '45 分', 'var(--c1)', 100, 'OCR 改动已合并，复盘方法写成文档'], ['《抵达之后》制作编排', '13 分', 'var(--c2)', 30, '场景从 3 个改成 9 个，还没出图'], ['刷 X', '2 分', 'var(--c3)', 5, '看了一条讲「聚焦」的帖子']],
+    open: '今天 20:19 开启，在电脑前大约 40 分钟，中间离开了 40 分钟。主要做了这几件事：',
+    question: '《抵达之后》里，62 个镜头写完后又推翻了布局，场景从 3 个改成 9 个，还一张图都没出。你觉得卡在哪里？',
+    answers: ['不知道正确的流程', '说不清自己要什么', '在等结构完美', '都不是，我来说'],
+    follow: {
+      '不知道正确的流程': '那再往下一层：你知道前一步「做好」是什么样子吗？如果不知道，就判断不出它其实没做好，只能先往下做，等出了问题再返工。同一晚的 Think My Day 你是先弄懂原理再动手，推进得很顺。',
+      '说不清自己要什么': '说不清的时候，可以不用描述：指出参考片里的某一帧，或者让 AI 给三个版本你来挑。你最喜欢参考片的哪一样？',
+      '在等结构完美': '如果先出几张图，你最怕看到的是什么？',
+    },
+    lesson: '不熟悉的事，先问流程和每一步做完的标准，再让 AI 动手。',
+  },
+  yesterday: {
+    desc: '10月30日 · 在电脑前 6 小时 12 分 · 5 件事情',
+    things: [['Think My Day：UI 构思', '2 小时 40 分', 'var(--c1)', 100, '写完 UI 构思 v1，出了 5 版设计图'], ['《抵达之后》知识库', '1 小时 50 分', 'var(--c2)', 70, '整理 CRCR × Riot 制片手法库'], ['稳定币资讯', '55 分', 'var(--c4)', 35, '看了 U 和 USD1 的理财补贴'], ['刷 X', '47 分', 'var(--c3)', 30, '']],
+    open: '昨天（示例数据）你在电脑前 6 小时 12 分钟，最多的时间给了 Think My Day 的界面构思：',
+    question: '昨天出了 5 版设计图，最后一版也没有定下来。是哪一点让你一直定不下来？',
+    answers: ['没想清楚自己喜欢的风格', '每版都有一点不满意', '还没认真比较', '都不是，我来说'],
+    follow: {},
+    lesson: '',
+  },
+  week: {
+    desc: '10月25日 – 10月31日 · 在电脑前 31 小时 · 9 件事情',
+    things: [['Think My Day', '14 小时', 'var(--c1)', 100, '采集层做完，复盘方法和界面在设计'], ['《抵达之后》', '7 小时', 'var(--c2)', 50, '知识库和逐镜编排，还没出图'], ['稳定币资讯', '4 小时', 'var(--c4)', 30, ''], ['刷 X', '3 小时', 'var(--c3)', 22, '']],
+    open: '这 7 天（示例数据）你在电脑前 31 小时。我看到一个反复出现的情况：',
+    question: '《抵达之后》这周推进了 7 小时，但每次都在「改结构」，没有进入下一步。这种「前一步没定、先往下做、再回头返工」，在别的事情上也出现过吗？',
+    answers: ['出现过，Think My Day 早期也是', '只在这件事上', '不确定，帮我找找', '都不是，我来说'],
+    follow: {},
+    lesson: '',
+  },
+};
+ranges.custom = { ...ranges.week, desc: '10月25日 – 10月31日 · 自定义范围（示例数据）' };
+
+function renderReview(key) {
+  const r = ranges[key];
+  $('#range-desc').textContent = r.desc;
+  $('#custom-range').classList.toggle('show', key === 'custom');
+  $('#side-things').innerHTML = r.things.map(([n, m, c, w]) => `<div class="bar-row" style="--tc:${c}"><span>${n}</span><span>${m}</span><div class="track"><i style="width:${w}%"></i></div></div>`).join('');
+  $('#chat').innerHTML = `
+    <div class="msg-ai"><div class="who"><i></i>复盘</div>${r.open}
+      <div class="mini-things">${r.things.map(([n, m, c, , s]) => `<div class="mini-thing" style="--tc:${c}"><div><b>${n}</b>${s ? `<div class="s">${s}</div>` : ''}</div><div class="m">${m}</div></div>`).join('')}</div>
+    </div>
+    <div class="msg-ai"><div class="who"><i></i>复盘</div>先看一件事。
+      <div class="q"><p>${r.question}</p><div class="answers">${r.answers.map(a => `<button>${a}</button>`).join('')}</div></div>
+    </div>`;
+  $$('#chat .answers button').forEach(b => b.onclick = () => answer(r, b));
+}
+function answer(r, b) {
+  b.parentElement.classList.add('used');
+  const chat = $('#chat');
+  chat.insertAdjacentHTML('beforeend', `<div class="msg-user">${b.textContent}</div>`);
+  const reply = r.follow[b.textContent] || '好，那你用自己的话说说看，下面输入就行。';
+  setTimeout(() => {
+    chat.insertAdjacentHTML('beforeend', `<div class="msg-ai"><div class="who"><i></i>复盘</div>${reply}</div>`);
+    if (r.lesson && r.follow[b.textContent]) {
+      chat.insertAdjacentHTML('beforeend', `<div class="lesson"><div class="k">记下一条经验</div>${r.lesson}<div style="margin-top:8px;display:flex;gap:6px"><button class="btn primary" id="keep">存为经验</button><button class="btn" id="rewrite">我换个说法</button></div></div>`);
+      $('#keep').onclick = e => { $('#lessons').insertAdjacentHTML('afterbegin', `<li>${r.lesson}<small>刚刚</small></li>`); e.target.closest('.lesson').querySelector('div:last-child').innerHTML = '<span style="color:var(--muted)">已存到「沉淀的经验」</span>'; };
+      $('#rewrite').onclick = () => $('#composer input').focus();
+    }
+    chat.parentElement.scrollTop = chat.parentElement.scrollHeight;
+  }, 450);
+  chat.parentElement.scrollTop = chat.parentElement.scrollHeight;
+}
+$$('#range button').forEach(b => b.onclick = () => {
+  $$('#range button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  renderReview(b.dataset.range);
+});
+$('#composer').onsubmit = e => {
+  e.preventDefault();
+  const input = $('#composer input'); if (!input.value.trim()) return;
+  $('#chat').insertAdjacentHTML('beforeend', `<div class="msg-user">${input.value.replace(/</g, '&lt;')}</div>`);
+  input.value = '';
+  const s = $('#chat').parentElement; s.scrollTop = s.scrollHeight;
+};
+renderReview('today');
+
+// 历史
+const days = [['周日', 25], ['周一', 26], ['周二', 27], ['周三', 28], ['周四', 29], ['周五', 30], ['周六', 31]];
+const recorded = { 30: true, 31: true, 29: true };
+let currentDay = 31, mode = 'time';
+const day31 = [
+  { k: 'mark', time: '20:19', title: '开启一天' },
+  { time: '20:19', dur: '1 分', c: 'var(--c2)', title: '看了一眼《抵达之后》的进度', text: 'ChatGPT 正在重建首帧和视频提示词。', apps: ['ChatGPT'] },
+  { time: '20:20', dur: '2 分', c: 'var(--c3)', title: '刷 X', text: '刷首页，点开一条讲 Alexandr Wang「如何拉开差距」的帖子。', apps: ['Chrome · x.com'],
+    details: [['20:20', '打开 X 首页'], ['20:21', '看了 U.Tech 的账号主页'], ['20:21', '点开 Hux 的帖子，读到「绝对聚焦」那一条'], ['20:22', '回到首页继续刷']] },
+  { time: '20:22', dur: '8 分', c: 'var(--c1)', title: 'Think My Day：问采集原理', text: '问了事件触发、NSWorkspace、锁屏、AXObserver、窗口重叠、什么时候读不到文字。', apps: ['Claude'], facts: ['输入约 300 字', '大部分时间在读'],
+    details: [['20:23', '写：<q>所以我在做的是一个事件触发型监控</q>'], ['20:26', '写：<q>AXObserver 的订阅底层机制是什么？</q>'], ['20:28', '写：<q>前后两个窗口有重叠……是不是可以知道我在 work on 前面的窗口</q>']] },
+  { time: '20:30', dur: '5 分', c: 'var(--c2)', title: '《抵达之后》：对页面提意见，问清分镜结构', text: '觉得「逐镜编排」区域堆了太多东西，问剧情段落、镜头和场景是什么关系。', apps: ['ChatGPT'], facts: ['输入约 200 字'],
+    details: [['20:31', '写：<q>下一步是做什么啊？</q>'], ['20:32', '写：<q>你的这个页面的布局，我很不喜欢</q>'], ['20:34', '写：<q>逐镜编排那个区域堆了太多东西了……</q>']] },
+  { time: '20:35', dur: '6 分', c: 'var(--c1)', title: 'Think My Day：继续问原理', text: '读辅助功能、AppKit、焦点窗口的解释。', apps: ['Claude'] },
+  { time: '20:41', dur: '5 分', c: 'var(--c3)', title: '在几件事之间来回切换', text: '5 分钟里换了 10 次以上：《抵达之后》、X 通知、Grok 的理财日报、Claude。', apps: ['ChatGPT', 'Chrome', 'Grok', 'Claude'] },
+  { time: '20:46', dur: '4 分', c: 'var(--c2)', title: '《抵达之后》：觉得场景太少，让 AI 查知识库', text: 'AI 查了参考 MV 的地点切换，建议改成 9 处场所。', apps: ['ChatGPT'] },
+  { time: '20:50', dur: '7 分', c: 'var(--c1)', title: 'Think My Day：OCR 改为按事件触发', text: '决定方案，改完代码，提交并合并进 main。', apps: ['Claude'], facts: ['做成了一件事'] },
+  { k: 'gap', time: '20:57', dur: '40 分', title: '离开电脑', text: '20:57 起没有输入，21:17 锁屏，21:37 解锁回来。期间 ChatGPT 在后台改完了场景。' },
+  { time: '21:37', dur: '2 分', c: 'var(--c2)', title: '《抵达之后》：看新版场景，问每个镜头需要哪些图片', text: '这个问题还没有答案。', apps: ['ChatGPT'] },
+  { k: 'mark', time: '21:39', title: '结束一天' },
+];
+const byThing = [
+  ['Think My Day：采集原理与复盘设计', '45 分', 'var(--c1)', '问清采集原理，OCR 改为按事件触发并合并。'],
+  ['《抵达之后》制作编排', '13 分', 'var(--c2)', '对页面提意见，场景从 3 个改成 9 个，还没出图。'],
+  ['刷 X', '2 分', 'var(--c3)', '首页和一条讲「聚焦」的帖子。'],
+  ['离开', '40 分', 'var(--line-strong)', '20:57–21:37，21:17 锁屏。'],
+];
+
+function renderDays() {
+  $('#days').innerHTML = days.map(([w, d]) => `<button class="day ${recorded[d] ? '' : 'empty'}" aria-pressed="${d === currentDay}" data-d="${d}">${w}<b>${d}</b><i></i></button>`).join('');
+  $$('#days .day').forEach(b => b.onclick = () => { currentDay = +b.dataset.d; renderDays(); renderHistory(); });
+}
+function renderHistory() {
+  const el = $('#history-content');
+  if (!recorded[currentDay]) { el.innerHTML = `<div class="empty-day">10月${currentDay}日没有开启。</div>`; return; }
+  if (currentDay !== 31) { el.innerHTML = `<div class="day-summary"><div>开启<b>09:48</b></div><div>结束<b>23:05</b></div><div>在电脑前<b>6 小时 12 分</b></div><div>事情<b>5 件</b></div></div><div class="empty-day">示例里只有 10月31日 的详细记录。</div>`; return; }
+  el.innerHTML = `
+    <div class="day-summary"><div>开启<b>20:19</b></div><div>结束<b>21:39</b></div><div>在电脑前<b>40 分</b></div><div>离开<b>40 分</b></div><div>事情<b>3 件</b></div></div>
+    ${mode === 'time' ? `<div class="timeline">${day31.map((e, i) => `
+      <div class="tl ${e.k || ''}" style="--tc:${e.c || 'var(--faint)'}">
+        <div class="tl-time">${e.time}${e.dur ? `<small>${e.dur}</small>` : ''}</div>
+        <div class="tl-rail"><i></i></div>
+        <div class="tl-body"><div class="card tl-card">
+          <h4>${e.title}</h4>${e.text ? `<p>${e.text}</p>` : ''}
+          ${(e.apps || e.facts) ? `<div class="chips">${(e.apps || []).map(a => `<span class="chip">${a}</span>`).join('')}${(e.facts || []).map(a => `<span class="chip" style="color:var(--accent);background:var(--accent-soft);border-color:transparent">${a}</span>`).join('')}</div>` : ''}
+          ${e.details ? `<button class="more" data-i="${i}">看细节</button><div class="details" id="d${i}"><ul>${e.details.map(([t, s]) => `<li><span>${t}</span><span>${s}</span></li>`).join('')}</ul></div>` : ''}
+        </div></div>
+      </div>`).join('')}</div>`
+    : `<div class="by-thing show">${byThing.map(([n, m, c, s]) => `<div class="card mini-thing" style="--tc:${c}"><div><b>${n}</b><div class="s">${s}</div></div><div class="m">${m}</div></div>`).join('')}</div>`}`;
+  $$('#history-content .more').forEach(b => b.onclick = () => { const d = $('#d' + b.dataset.i); d.classList.toggle('open'); b.textContent = d.classList.contains('open') ? '收起' : '看细节'; });
+}
+$$('#view-mode button').forEach(b => b.onclick = () => { mode = b.dataset.mode; $$('#view-mode button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderHistory(); });
+renderDays(); renderHistory();
+</script>
+</body>
+</html>

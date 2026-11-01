@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Think My Day 原型 v7</title>
+<style>
+/*
+  v7：重新构思，目标是「高级」和「对 ADHD 友好」。
+  对 ADHD 友好落在这几条上：
+  1. 一屏只有一个主角：「现在在做的事」最大、最亮，其余都退后。
+  2. 时间看得见：时长用大数字，一天的时间用成比例的色条，不只是文字。
+  3. 少读字：每件事一行字以内，细节点开才看。
+  4. 只给下一步：待办只突出「下一件」，其余收起来。
+  5. 看得到进展：完成和推进有明确的、温和的反馈；不用红色、不责备。
+  6. 颜色有意义：每件事情一种颜色，从头到尾不变，一眼认出是哪件事。
+  高级感来自：温暖的近白底、克制的灰、同一明度的四种事情色、圆体数字、宽松的留白，只有「现在」会发光。
+*/
+:root, [data-theme="light"] {
+  --bg: #e9e6e0;
+  --canvas: #fbfaf7; --side: #f4f2ee; --line: rgba(31,29,26,.07); --line-2: rgba(31,29,26,.13);
+  --text: #1f1d1a; --text-2: #55514b; --text-3: #8d887f; --text-4: #bdb8ae;
+  --rec: #2fb57c;
+  --violet: #7d6cf2; --violet-bg: #efecfe; --coral: #f07b56; --coral-bg: #fdede6;
+  --sky: #3f9fe8; --sky-bg: #e6f2fc; --amber: #e8a93a; --amber-bg: #fcf3df; --stone: #a9a39a; --stone-bg: #f0eee9;
+  --btn: #1f1d1a; --btn-text: #fbfaf7;
+  --shadow: 0 1px 2px rgba(40,30,20,.04), 0 24px 64px -18px rgba(40,30,20,.2);
+}
+[data-theme="dark"] {
+  --bg: #0b0b0d;
+  --canvas: #161618; --side: #121214; --line: rgba(255,255,255,.06); --line-2: rgba(255,255,255,.12);
+  --text: #f1efea; --text-2: #c2beb6; --text-3: #8a867f; --text-4: #55524d;
+  --rec: #4ed39a;
+  --violet: #a196ff; --violet-bg: rgba(161,150,255,.13); --coral: #ff9876; --coral-bg: rgba(255,152,118,.13);
+  --sky: #6db8f5; --sky-bg: rgba(109,184,245,.13); --amber: #f2c063; --amber-bg: rgba(242,192,99,.13); --stone: #7c776f; --stone-bg: rgba(255,255,255,.06);
+  --btn: #f1efea; --btn-text: #161618;
+  --shadow: 0 0 0 1px rgba(255,255,255,.05), 0 30px 80px -20px rgba(0,0,0,.8);
+}
+:root {
+  --round: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14.5px/1.6 var(--sans); -webkit-font-smoothing: antialiased; min-height: 100vh; padding: 28px 16px 48px; display: flex; justify-content: center; transition: background .4s; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+.n { font-family: var(--round); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+
+.window { width: min(1200px, 100%); height: 800px; display: flex; overflow: hidden; background: var(--canvas); border-radius: 14px; box-shadow: var(--shadow); transition: background .4s; }
+
+/* 侧栏 */
+.sidebar { width: 216px; flex: none; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 16px 12px 18px; transition: background .4s; }
+.traffic { display: flex; gap: 8px; padding: 0 8px 26px; }
+.traffic i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.traffic i:nth-child(1) { background: #ff5f57; } .traffic i:nth-child(2) { background: #febc2e; } .traffic i:nth-child(3) { background: #28c840; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 10px 26px; font: 600 15px var(--round); white-space: nowrap; }
+.logo { width: 24px; height: 24px; border-radius: 8px; background: conic-gradient(from 200deg, var(--violet), var(--coral), var(--amber), var(--sky), var(--violet)); position: relative; }
+.logo::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--side); }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav button { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 10px; color: var(--text-2); white-space: nowrap; transition: background .15s, color .15s; }
+.nav button:hover { background: var(--line); }
+.nav button[aria-current="page"] { background: var(--canvas); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px var(--line-2); }
+.nav svg { width: 18px; height: 18px; flex: none; }
+.nav button:disabled { opacity: .45; cursor: default; }
+.side-foot { margin-top: auto; padding: 0 10px; }
+.mode { display: flex; background: var(--line); border-radius: 9px; padding: 2px; font-size: 12.5px; }
+.mode button { flex: 1; padding: 4px 0; border-radius: 7px; color: var(--text-3); }
+.mode button[aria-pressed="true"] { background: var(--canvas); color: var(--text); box-shadow: 0 1px 2px var(--line-2); }
+
+/* 记录状态胶囊和呼吸灯 */
+.rec { display: inline-flex; align-items: center; gap: 9px; padding: 7px 14px 7px 12px; border-radius: 99px; background: var(--canvas); border: 1px solid var(--line-2); font-weight: 500; white-space: nowrap; }
+.rec .n { font-weight: 600; }
+.pulse { position: relative; width: 9px; height: 9px; border-radius: 50%; background: var(--rec); flex: none; }
+.pulse::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--rec); animation: ring 2.8s ease-out infinite; }
+.pulse.off { background: var(--text-4); } .pulse.off::after { display: none; }
+@keyframes ring { 0% { transform: scale(1); opacity: .5; } 80%, 100% { transform: scale(3); opacity: 0; } }
+
+/* 页面骨架 */
+.main { flex: 1; min-width: 0; display: flex; }
+.page { display: none; flex: 1; min-width: 0; min-height: 0; }
+.page.active { display: flex; }
+.scroll { overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.col { flex: 1; min-width: 0; padding: 28px 44px 44px; }
+.aside { width: 320px; flex: none; border-left: 1px solid var(--line); padding: 28px 28px 32px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; }
+.date { color: var(--text-3); font-weight: 500; }
+.date b { color: var(--text); font: 600 22px var(--round); margin-right: 10px; }
+.h { font: 600 13px var(--sans); color: var(--text-3); margin: 0 0 14px; letter-spacing: .02em; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 99px; font-weight: 600; white-space: nowrap; transition: transform .12s, opacity .2s, background .2s; }
+.btn:active { transform: scale(.97); }
+.btn.solid { background: var(--btn); color: var(--btn-text); }
+.btn.solid:hover { opacity: .88; }
+.btn.ghost { border: 1px solid var(--line-2); color: var(--text-2); }
+.btn.ghost:hover { background: var(--line); color: var(--text); }
+.btn.big { padding: 14px 32px; font-size: 16px; }
+
+/* 现在：唯一的主角 */
+.now { margin-top: 26px; border-radius: 22px; padding: 30px 32px 28px; background: var(--c-bg); position: relative; overflow: hidden; transition: background .4s; }
+.now::before { content: ""; position: absolute; right: -80px; top: -120px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--c) 22%, transparent), transparent 70%); }
+.now-tag { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--c); position: relative; }
+.now-main { display: flex; align-items: center; gap: 22px; margin-top: 18px; position: relative; }
+.bubble { position: relative; width: 64px; height: 64px; border-radius: 20px; background: var(--c); color: #fff; display: grid; place-items: center; flex: none; }
+.bubble svg { width: 30px; height: 30px; }
+.bubble.live::before, .bubble.live::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--c); animation: breathe 3.6s ease-out infinite; }
+.bubble.live::after { animation-delay: 1.8s; }
+@keyframes breathe { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.55); opacity: 0; } }
+.now-title { font: 600 26px/1.3 var(--round); letter-spacing: -.01em; }
+.now-step { color: var(--text-2); margin-top: 4px; }
+.now-figs { display: flex; gap: 40px; margin-top: 26px; position: relative; }
+.fig .v { font: 600 34px/1 var(--round); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.fig .v small { font: 600 15px var(--round); color: var(--text-3); margin-left: 3px; }
+.fig .k { font-size: 12.5px; color: var(--text-3); margin-top: 6px; }
+.also { display: flex; align-items: center; gap: 10px; margin-top: 16px; color: var(--text-3); font-size: 13.5px; flex-wrap: wrap; }
+.mini { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 4px; border-radius: 99px; background: var(--c-bg); color: var(--text-2); }
+.mini i { width: 20px; height: 20px; border-radius: 7px; background: var(--c); color: #fff; display: grid; place-items: center; }
+.mini i svg { width: 12px; height: 12px; }
+
+/* 今天：成比例的时间条 */
+.today { margin-top: 36px; }
+.river { position: relative; height: 34px; border-radius: 12px; background: var(--line); }
+.river i { position: absolute; top: 4px; bottom: 4px; border-radius: 8px; background: var(--c); }
+.river i.away { background: repeating-linear-gradient(135deg, var(--line-2) 0 2px, transparent 2px 7px); }
+.river .now-line { position: absolute; top: -6px; bottom: -6px; width: 2px; border-radius: 2px; background: var(--text); }
+.hours { position: relative; height: 20px; margin-top: 8px; font: 500 12px var(--round); color: var(--text-3); }
+.hours span { position: absolute; transform: translateX(-50%); } .hours span:first-child { transform: none; } .hours span:last-child { transform: translateX(-100%); }
+.totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 26px; }
+.totals .v { font: 600 26px/1 var(--round); font-variant-numeric: tabular-nums; }
+.totals .v small { font: 600 13px var(--round); color: var(--text-3); margin-left: 2px; }
+.totals .k { font-size: 12.5px; color: var(--text-3); margin-top: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; font-size: 13px; color: var(--text-2); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend span::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--c); }
+.legend span.away::before { background: repeating-linear-gradient(135deg, var(--text-4) 0 1.5px, transparent 1.5px 4px); }
+
+/* 未开启 / 已结束 */
+.start { margin-top: 60px; text-align: center; }
+.start .big-pulse { width: 120px; height: 120px; margin: 0 auto 28px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--rec) 70%); opacity: .9; box-shadow: 0 0 60px color-mix(in srgb, var(--rec) 40%, transparent); animation: idle 4s ease-in-out infinite; }
+@keyframes idle { 50% { transform: scale(.92); opacity: .7; } }
+.start h2 { margin: 0; font: 600 30px var(--round); }
+.start p { color: var(--text-3); margin: 8px 0 28px; }
+.ended { margin-top: 26px; border-radius: 22px; padding: 30px 32px; background: var(--stone-bg); }
+.ended h2 { margin: 0; font: 600 24px var(--round); }
+.ended p { margin: 6px 0 0; color: var(--text-2); }
+
+/* 右栏：只突出下一件 */
+.next { border-radius: 18px; padding: 20px; background: var(--side); border: 1px solid var(--line); }
+.next .k { font-size: 12.5px; font-weight: 600; color: var(--coral); display: flex; align-items: center; gap: 6px; }
+.next .t { font: 600 17px/1.45 var(--round); margin: 8px 0 4px; }
+.next .d { font-size: 12.5px; color: var(--text-3); }
+.next .acts { display: flex; gap: 8px; margin-top: 16px; }
+.add { display: flex; align-items: center; gap: 10px; margin: 18px 0 8px; padding: 11px 14px; border-radius: 12px; background: var(--side); color: var(--text-3); border: 1px solid transparent; transition: border-color .2s; }
+.add:focus-within { border-color: var(--line-2); }
+.add input { flex: 1; min-width: 0; border: 0; outline: none; background: none; }
+.add input::placeholder { color: var(--text-4); }
+.later { margin-top: 14px; }
+.later summary { list-style: none; cursor: pointer; color: var(--text-3); font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; padding: 6px 2px; }
+.later summary::-webkit-details-marker { display: none; }
+.later summary::after { content: "展开"; font-weight: 500; }
+.later[open] summary::after { content: "收起"; }
+.todo { display: flex; gap: 12px; align-items: flex-start; padding: 11px 2px; border-bottom: 1px solid var(--line); }
+.check { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--text-4); flex: none; margin-top: 1px; display: grid; place-items: center; transition: all .2s; }
+.check:hover { border-color: var(--rec); }
+.todo .x { flex: 1; } .todo .d { font-size: 12px; color: var(--text-3); }
+.wins { margin-top: 24px; padding: 16px 18px; border-radius: 16px; background: color-mix(in srgb, var(--rec) 10%, transparent); }
+.wins .k { font-size: 12.5px; font-weight: 600; color: var(--rec); }
+.wins .v { font: 600 26px/1.2 var(--round); margin: 4px 0 6px; }
+.wins ul { margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--text-2); }
+.wins li { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
+.wins li::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--rec) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M4 7.2l2 2 4-4.4' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); flex: none; }
+.wins li.new { animation: pop .5s cubic-bezier(.2,1.6,.4,1); }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } }
+
+/* 复盘 */
+.seg { display: inline-flex; background: var(--line); border-radius: 11px; padding: 3px; }
+.seg button { padding: 6px 14px; border-radius: 8px; color: var(--text-2); font-weight: 500; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--canvas); color: var(--text); box-shadow: 0 1px 2px var(--line-2); }
+.review { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.review-top { padding: 28px 44px 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.review-top h1, .hist-top h1 { margin: 0; font: 600 24px var(--round); }
+.review-top .sub { color: var(--text-3); font-size: 13px; margin-top: 2px; }
+.custom { display: none; gap: 8px; align-items: center; color: var(--text-3); margin-top: 8px; }
+.custom.show { display: flex; }
+.custom input { border: 1px solid var(--line-2); border-radius: 8px; background: var(--canvas); padding: 3px 8px; }
+.review-body { flex: 1; display: flex; min-height: 0; }
+.talk { flex: 1; padding: 30px 44px; }
+.talk-inner { max-width: 600px; margin: 0 auto; }
+.msg { margin-bottom: 26px; }
+.msg .who { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--text-3); margin-bottom: 8px; }
+.msg .who i { width: 20px; height: 20px; border-radius: 7px; background: conic-gradient(from 200deg, var(--violet), var(--coral), var(--amber), var(--sky), var(--violet)); }
+.msg p { margin: 0; font-size: 15px; }
+.things { display: grid; gap: 4px; margin-top: 12px; }
+.thing { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.thing i { width: 32px; height: 32px; border-radius: 10px; background: var(--c-bg); color: var(--c); display: grid; place-items: center; flex: none; }
+.thing i svg { width: 17px; height: 17px; }
+.thing .nm { flex: 1; font-weight: 600; }
+.thing .nm small { display: block; font-weight: 400; color: var(--text-3); font-size: 12.5px; }
+.thing .tm { font: 600 16px var(--round); font-variant-numeric: tabular-nums; }
+.thing .tm small { font-size: 12px; color: var(--text-3); margin-left: 2px; }
+.q { margin-top: 10px; }
+.q .step { font-size: 12px; font-weight: 600; color: var(--violet); display: flex; align-items: center; gap: 8px; }
+.q .step i { display: inline-block; width: 16px; height: 4px; border-radius: 2px; background: var(--line-2); }
+.q .step i.on { background: var(--violet); }
+.q h3 { margin: 10px 0 14px; font: 600 18px/1.55 var(--round); }
+.opts { display: grid; gap: 8px; }
+.opts button { text-align: left; padding: 13px 16px; border-radius: 14px; border: 1.5px solid var(--line-2); font-weight: 500; transition: border-color .15s, background .15s; }
+.opts button:hover { border-color: var(--violet); background: var(--violet-bg); }
+.opts.used button { pointer-events: none; opacity: .4; }
+.opts.used button.picked { opacity: 1; border-color: var(--violet); background: var(--violet-bg); }
+.me { display: flex; justify-content: flex-end; margin-bottom: 26px; }
+.me p { margin: 0; max-width: 80%; padding: 10px 16px; border-radius: 18px 18px 6px 18px; background: var(--btn); color: var(--btn-text); }
+.lesson { margin-bottom: 30px; padding: 20px 22px; border-radius: 18px; background: var(--amber-bg); }
+.lesson .k { font-size: 12.5px; font-weight: 600; color: color-mix(in srgb, var(--amber) 80%, var(--text)); }
+.lesson blockquote { margin: 8px 0 14px; font: 600 18px/1.55 var(--round); }
+.lesson .acts { display: flex; gap: 8px; }
+.compose { border-top: 1px solid var(--line); padding: 14px 44px 20px; }
+.compose form { max-width: 600px; margin: 0 auto; display: flex; gap: 10px; align-items: center; padding: 6px 6px 6px 16px; border-radius: 99px; background: var(--side); }
+.compose input { flex: 1; min-width: 0; border: 0; outline: none; background: none; }
+.compose input::placeholder { color: var(--text-4); }
+.r-aside { width: 290px; flex: none; border-left: 1px solid var(--line); padding: 28px 26px; }
+.stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; margin-bottom: 12px; }
+.stack i { background: var(--c); }
+.r-list { display: grid; gap: 8px; font-size: 13px; margin-bottom: 30px; }
+.r-list div { display: flex; align-items: center; gap: 8px; }
+.r-list div::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--c); flex: none; }
+.r-list span:first-child { flex: 1; color: var(--text-2); }
+.r-list .n { font-weight: 600; }
+.lessons { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lessons li { padding: 12px 14px; border-radius: 14px; background: var(--side); font-size: 13.5px; line-height: 1.55; }
+.lessons li small { display: block; color: var(--text-3); font-size: 11.5px; margin-top: 4px; }
+
+/* 历史：高度和时长成比例的时间线 */
+.hist { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.hist-top { padding: 28px 44px 0; display: flex; justify-content: space-between; align-items: center; }
+.days { display: flex; gap: 8px; padding: 18px 44px 18px; border-bottom: 1px solid var(--line); }
+.day { width: 50px; padding: 8px 0; border-radius: 14px; text-align: center; color: var(--text-3); font-size: 12px; transition: background .15s; }
+.day b { display: block; font: 600 18px var(--round); color: var(--text-2); margin-top: 2px; }
+.day i { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--violet); margin: 4px auto 0; }
+.day.none { opacity: .4; } .day.none i { visibility: hidden; }
+.day:hover { background: var(--line); }
+.day[aria-pressed="true"] { background: var(--btn); color: var(--btn-text); } .day[aria-pressed="true"] b { color: var(--btn-text); } .day[aria-pressed="true"] i { background: var(--btn-text); }
+.dsum { display: flex; gap: 36px; padding: 20px 44px 6px; flex-wrap: wrap; }
+.dsum .v { font: 600 22px/1 var(--round); font-variant-numeric: tabular-nums; } .dsum .v small { font-size: 12.5px; color: var(--text-3); margin-left: 2px; }
+.dsum .k { font-size: 12px; color: var(--text-3); margin-top: 5px; }
+.flow { padding: 22px 44px 60px; max-width: 820px; }
+.blk { display: grid; grid-template-columns: 52px 36px 1fr; gap: 0 14px; }
+.blk .tm { font: 600 13.5px var(--round); color: var(--text-2); text-align: right; padding-top: 7px; font-variant-numeric: tabular-nums; }
+.blk .cap { position: relative; display: flex; justify-content: center; padding-bottom: 6px; }
+.blk .cap::before { content: ""; position: absolute; top: 0; bottom: 6px; width: 36px; border-radius: 12px; background: var(--c-bg); }
+.blk .cap i { position: relative; width: 36px; height: 36px; border-radius: 12px; background: var(--c); color: #fff; display: grid; place-items: center; }
+.blk .cap i svg { width: 18px; height: 18px; }
+.blk .bd { padding: 5px 0 18px; }
+.blk h4 { margin: 0; font: 600 15.5px/1.45 var(--round); }
+.blk h4 small { font: 500 12.5px var(--sans); color: var(--text-3); margin-left: 8px; }
+.blk p { margin: 3px 0 0; color: var(--text-2); font-size: 13.5px; }
+.blk .more { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--c); }
+.blk .det { display: none; margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--side); list-style: none; }
+.blk .det.open { display: block; }
+.blk .det li { display: grid; grid-template-columns: 44px 1fr; gap: 8px; font-size: 13px; color: var(--text-3); padding: 2px 0; }
+.blk .det li span:first-child { font-family: var(--round); font-weight: 600; }
+.blk .det q { color: var(--text); quotes: "「" "」"; }
+.blk.away .cap::before { background: repeating-linear-gradient(135deg, var(--line-2) 0 2px, transparent 2px 7px); }
+.blk.away .cap i { background: var(--stone); }
+.blk.away h4 { color: var(--text-3); }
+.blk.mark .cap::before { display: none; }
+.blk.mark .cap i { width: 12px; height: 12px; border-radius: 50%; background: var(--text); margin-top: 10px; }
+.blk.mark h4 { font-size: 13px; color: var(--text-3); padding-top: 4px; }
+.blk.mark .bd { padding-bottom: 12px; }
+.nothing { padding: 70px 44px; color: var(--text-3); font: 600 17px var(--round); }
+
+/* 细化：页面切换、键盘焦点 */
+.page.active { animation: enter .28s ease; }
+@keyframes enter { from { opacity: 0; transform: translateY(4px); } }
+:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+
+/* 开启一天：带上没做完的待办，选今天不看的 App */
+#home.idle .aside, #home.idle .today { display: none; }
+.start-plan { max-width: 460px; margin: 30px auto 0; text-align: left; }
+.start-plan .h { margin: 22px 0 8px; }
+.carry { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.carry .x { flex: 1; } .carry .d { font-size: 12px; color: var(--text-3); }
+.carry button, .chip button { color: var(--text-4); font-size: 16px; line-height: 1; padding: 2px 4px; }
+.carry button:hover, .chip button:hover { color: var(--text); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 6px 5px 12px; border-radius: 99px; background: var(--side); font-size: 13px; color: var(--text-2); }
+.start-plan .add { margin: 10px 0 0; }
+
+/* 时间条：悬停看是哪一段，点一下跳到历史 */
+.river i { cursor: pointer; transition: filter .15s, transform .15s; }
+.river i:hover { filter: brightness(1.08) saturate(1.1); transform: scaleY(1.15); }
+.tip { position: absolute; bottom: calc(100% + 10px); transform: translateX(-50%); background: var(--btn); color: var(--btn-text); font-size: 12.5px; padding: 6px 10px; border-radius: 8px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .15s; z-index: 5; }
+.tip.show { opacity: 1; }
+.blk h4 { border-radius: 8px; margin-left: -6px; padding-left: 6px; }
+.blk.flash h4 { animation: flash 1.8s ease; }
+@keyframes flash { 0%, 45% { background: var(--c-bg); } 100% { background: transparent; } }
+
+/* 复盘做完的小结 */
+.wrap-up { margin: 4px 0 30px; padding: 22px 22px 14px; border-radius: 18px; background: var(--side); }
+.wrap-up h3 { margin: 0 0 10px; font: 600 18px var(--round); display: flex; align-items: center; gap: 10px; }
+.wrap-up h3::before { content: ""; width: 22px; height: 22px; border-radius: 50%; background: var(--rec) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M4 7.2l2 2 4-4.4' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat; }
+.wrap-up .r { display: flex; gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.wrap-up .r span:first-child { width: 76px; flex: none; color: var(--text-3); }
+.skip { font-size: 13px; color: var(--text-3); margin-left: 4px; }
+.skip:hover { color: var(--text); }
+
+@media (prefers-reduced-motion: reduce) { .pulse::after, .bubble.live::before, .bubble.live::after, .start .big-pulse { animation: none; } }
+@media (max-width: 880px) {
+  body { padding: 0; }
+  .window { height: auto; min-height: 100vh; border-radius: 0; flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .traffic, .nav-t { display: none; }
+  .brand { padding: 0 10px 0 4px; }
+  .nav { flex-direction: row; }
+  .side-foot { margin: 0 0 0 auto; padding: 0; }
+  .page { flex-direction: column; }
+  .col, .talk, .compose, .review-top, .hist-top, .days, .dsum, .flow { padding-left: 16px; padding-right: 16px; }
+  .aside, .r-aside { width: auto; border-left: 0; border-top: 1px solid var(--line); padding: 24px 16px; }
+  .review-body { flex-direction: column; }
+  .now { padding: 24px 20px; }
+  .now-figs { gap: 24px; flex-wrap: wrap; }
+  .top { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7.5 3.5 12 8 16.5M16 7.5l4.5 4.5-4.5 4.5M13.5 5.5l-3 13"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M3.5 9.5h17M8.5 5l2 4.5M14 5l2 4.5"/></symbol>
+  <symbol id="i-feed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.8 2.6 2.8 14.4 0 17M12 3.5c-2.8 2.6-2.8 14.4 0 17"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.5A7.5 7.5 0 1 1 9.5 4.5a6 6 0 0 0 10 10z"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5V8M12 16v1.5"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-talk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+</svg>
+
+<div class="window">
+  <aside class="sidebar">
+    <div class="traffic"><i></i><i></i><i></i></div>
+    <div class="brand"><span class="logo"></span>Think My Day</div>
+    <nav class="nav" aria-label="功能">
+      <button data-page="home" aria-current="page"><svg><use href="#i-home"/></svg><span class="nav-t">今天</span></button>
+      <button data-page="review"><svg><use href="#i-talk"/></svg><span class="nav-t">复盘</span></button>
+      <button data-page="history"><svg><use href="#i-clock"/></svg><span class="nav-t">历史</span></button>
+      <button disabled><svg><use href="#i-gear"/></svg><span class="nav-t">设置</span></button>
+    </nav>
+    <div class="side-foot">
+      <div class="mode" aria-label="外观"><button data-mode="light" aria-pressed="true">浅色</button><button data-mode="dark" aria-pressed="false">深色</button></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- 今天 -->
+    <section class="page active" id="home">
+      <div class="col scroll">
+        <div class="top">
+          <div class="date"><b>10 月 31 日</b>周六</div>
+          <div id="day-ctl"></div>
+        </div>
+        <div id="hero"></div>
+
+        <div class="today">
+          <p class="h">今天的时间</p>
+          <div class="river" id="river"></div>
+          <div class="hours"><span style="left:0">20:00</span><span style="left:25%">20:30</span><span style="left:50%">21:00</span><span style="left:75%">21:30</span><span style="left:100%">22:00</span></div>
+          <div class="legend">
+            <span style="--c: var(--violet)">Think My Day</span><span style="--c: var(--coral)">《抵达之后》</span><span style="--c: var(--sky)">刷 X 和切换</span><span class="away">离开</span>
+          </div>
+          <div class="totals">
+            <div><div class="v">40<small>分</small></div><div class="k">在电脑前</div></div>
+            <div><div class="v">40<small>分</small></div><div class="k">离开</div></div>
+            <div><div class="v">2<small>件</small></div><div class="k">推进的事情</div></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="aside scroll">
+        <p class="h">下一件</p>
+        <div id="next"></div>
+        <label class="add"><svg width="16" height="16"><use href="#i-plus"/></svg><input id="add" placeholder="想到一件要做的事，回车加进来"></label>
+        <details class="later" id="later"><summary id="later-sum"></summary><div id="later-list"></div></details>
+        <div class="wins"><div class="k">今天做成的</div><div class="v n" id="wins-count"></div><ul id="wins"></ul></div>
+      </aside>
+    </section>
+
+    <!-- 复盘 -->
+    <section class="page" id="review">
+      <div class="review">
+        <div class="review-top">
+          <div><h1>复盘</h1><div class="sub" id="range-sub"></div>
+            <div class="custom" id="custom"><input type="date" value="2026-10-25"> 至 <input type="date" value="2026-10-31"></div></div>
+          <div class="seg" id="range">
+            <button data-r="today" aria-pressed="true">今天</button><button data-r="yesterday" aria-pressed="false">昨天</button><button data-r="week" aria-pressed="false">最近 7 天</button><button data-r="custom" aria-pressed="false">自定义</button>
+          </div>
+        </div>
+        <div class="review-body">
+          <div style="flex:1; display:flex; flex-direction:column; min-width:0">
+            <div class="talk scroll" style="flex:1" id="talk"><div class="talk-inner" id="chat"></div></div>
+            <div class="compose"><form id="compose"><input placeholder="用自己的话回答，或者随便问"><button class="btn solid" type="submit">发送</button></form></div>
+          </div>
+          <aside class="r-aside scroll">
+            <p class="h">这段时间</p>
+            <div class="stack" id="stack"></div>
+            <div class="r-list" id="r-list"></div>
+            <p class="h">记下来的经验</p>
+            <ul class="lessons" id="lessons">
+              <li>不熟悉的事，先问流程和每一步做完的标准，再让 AI 动手。<small>10 月 31 日</small></li>
+              <li>先说出自己喜欢什么，再让 AI 动手。<small>10 月 31 日</small></li>
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- 历史 -->
+    <section class="page" id="history">
+      <div class="hist">
+        <div class="hist-top"><h1>历史</h1>
+          <div class="seg" id="view"><button data-v="time" aria-pressed="true">时间线</button><button data-v="thing" aria-pressed="false">按事情</button></div></div>
+        <div class="days" id="days"></div>
+        <div class="scroll" style="flex:1" id="hist-body"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const pad = n => String(n).padStart(2, '0');
+const hms = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; };
+const icon = id => `<svg><use href="#i-${id}"/></svg>`;
+const T = { tmd: ['violet', 'code', 'Think My Day'], film: ['coral', 'film', '《抵达之后》'], x: ['sky', 'feed', '刷 X'], coin: ['amber', 'coin', '稳定币资讯'], away: ['stone', 'moon', '离开'] };
+const cvars = k => `--c: var(--${T[k][0]}); --c-bg: var(--${T[k][0]}-bg)`;
+
+$$('[data-mode]').forEach(b => b.onclick = () => { document.documentElement.dataset.theme = b.dataset.mode; $$('[data-mode]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+$$('.nav button[data-page]').forEach(b => b.onclick = () => {
+  $$('.nav button[data-page]').forEach(x => x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current'));
+  $$('.page').forEach(p => p.classList.toggle('active', p.id === b.dataset.page));
+});
+
+// 一天：示例从 20:19 开启；「现在这一段」从 12 分钟前开始
+const st = { day: 'live', start: Date.now() - 80 * 60000, seg: Date.now() - 12 * 60000, startLabel: '20:19', end: null };
+function hero() {
+  const ctl = $('#day-ctl'), el = $('#hero');
+  // 还没开启时只做一件事：开启。右栏和今天的时间先藏起来
+  $('#home').classList.toggle('idle', st.day === 'idle');
+  if (st.day === 'idle') {
+    ctl.innerHTML = '';
+    el.innerHTML = `<div class="start"><div class="big-pulse"></div><h2>准备好开始了吗？</h2><p>开启之后才开始记录。计划 09:00 开始。</p>
+      <div class="start-plan">
+        <p class="h">今天想推进的</p><div id="carry"></div>
+        <label class="add"><svg width="16" height="16"><use href="#i-plus"/></svg><input id="add2" placeholder="还想做什么？回车加进来"></label>
+        <p class="h">今天不看的 App</p><div class="chips" id="blocks"></div>
+      </div>
+      <button class="btn solid big" id="go" style="margin-top:30px">开启一天</button></div>`;
+    renderCarry();
+    $('#add2').addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || e.isComposing || !e.target.value.trim()) return;
+      todos.push({ x: e.target.value.trim(), d: '今天' }); e.target.value = ''; renderCarry(); renderTodos();
+    });
+    $('#go').onclick = () => { Object.assign(st, { day: 'live', start: Date.now(), seg: Date.now(), startLabel: `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}` }); hero(); };
+    return;
+  }
+  if (st.day === 'ended') {
+    ctl.innerHTML = `<span class="rec"><span class="pulse off"></span>已结束 <span class="n">${hms(st.end - st.start)}</span></span>`;
+    el.innerHTML = `<div class="ended"><h2>今天辛苦了。</h2><p>做成了 ${wins.length} 件事，推进了 2 件。去复盘看看今天？</p>
+      <div style="display:flex; gap:8px; margin-top:18px"><button class="btn solid" id="to-review">去复盘</button><button class="btn ghost" id="new-day">开启新的一天</button></div></div>`;
+    $('#to-review').onclick = () => $('.nav button[data-page="review"]').click();
+    $('#new-day').onclick = () => { st.day = 'idle'; hero(); };
+    return;
+  }
+  ctl.innerHTML = `<span class="rec"><span class="pulse"></span>记录中 <span class="n" data-total>${hms(Date.now() - st.start)}</span></span>
+    <button class="btn ghost" id="stop" style="margin-left:8px">结束一天</button>`;
+  $('#stop').onclick = () => { st.day = 'ended'; st.end = Date.now(); hero(); };
+  el.innerHTML = `
+    <div class="now" style="${cvars('tmd')}">
+      <div class="now-tag">正在做</div>
+      <div class="now-main"><div class="bubble live">${icon('code')}</div>
+        <div><div class="now-title">Think My Day：设计界面</div><div class="now-step">刚把复盘方法写成文档，正在挑界面风格</div></div></div>
+      <div class="now-figs">
+        <div class="fig"><div class="v" data-seg>${Math.floor((Date.now() - st.seg) / 60000)}<small>分</small></div><div class="k">这一段专注了</div></div>
+        <div class="fig"><div class="v">45<small>分</small></div><div class="k">今天在这件事上</div></div>
+      </div>
+    </div>
+    <div class="also">同时在跑
+      <span class="mini" style="${cvars('film')}"><i>${icon('film')}</i>《抵达之后》· AI 在处理</span></div>`;
+}
+let blocks = ['1Password', '支付宝', '招商银行', 'MetaMask'];
+function renderCarry() {
+  $('#carry').innerHTML = todos.map((t, i) => `<div class="carry"><div class="x">${t.x}<div class="d">${t.d}</div></div><button data-i="${i}" aria-label="今天不做">×</button></div>`).join('') || '<div class="carry"><div class="x" style="color:var(--text-3)">没有带过来的待办。</div></div>';
+  $$('#carry button').forEach(b => b.onclick = () => { todos.splice(+b.dataset.i, 1); renderCarry(); renderTodos(); });
+  $('#blocks').innerHTML = blocks.map((b, i) => `<span class="chip">${b}<button data-i="${i}" aria-label="移出">×</button></span>`).join('');
+  $$('#blocks button').forEach(b => b.onclick = () => { blocks.splice(+b.dataset.i, 1); renderCarry(); });
+}
+setInterval(() => {
+  const t = $('[data-total]'); if (t) t.textContent = hms(Date.now() - st.start);
+  const s = $('[data-seg]'); if (s) s.innerHTML = `${Math.floor((Date.now() - st.seg) / 60000)}<small>分</small>`;
+}, 1000);
+
+// 时间条：20:00–22:00，按真实时刻排开
+const spans = [[19, 20, 'film'], [20, 22, 'x'], [22, 30, 'tmd'], [30, 35, 'film'], [35, 41, 'tmd'], [41, 46, 'x'], [46, 50, 'film'], [50, 57, 'tmd'], [57, 97, 'away'], [97, 99, 'film']];
+const clockAt = m => `${20 + Math.floor(m / 60)}:${pad(m % 60)}`;
+$('#river').innerHTML = spans.map(([a, b, k]) => `<i class="${k === 'away' ? 'away' : ''}" style="left:calc(${a / 1.2}% + 1px); width:calc(${(b - a) / 1.2}% - 2px); ${cvars(k)}"></i>`).join('') + `<span class="now-line" style="left:${99 / 1.2}%"></span>`;
+$('#river').insertAdjacentHTML('beforeend', '<span class="tip" id="tip"></span>');
+$$('#river i').forEach((seg, i) => {
+  const [a, b, k] = spans[i];
+  seg.onmouseenter = () => { const tip = $('#tip'); tip.textContent = `${clockAt(a)}–${clockAt(b)} · ${T[k][2]} · ${b - a} 分`; tip.style.left = `${(a + b) / 2.4}%`; tip.classList.add('show'); };
+  seg.onmouseleave = () => $('#tip').classList.remove('show');
+  seg.onclick = () => {
+    $('.nav button[data-page="history"]').click();
+    if (day !== 31) { day = 31; days(); hist(); }
+    const blk = $(`#hist-body .blk[data-tm="${clockAt(a)}"]`) || $(`#hist-body .blk[data-tm="${clockAt(a + 1)}"]`);
+    if (blk) { blk.scrollIntoView({ block: 'center', behavior: 'smooth' }); blk.classList.remove('flash'); void blk.offsetWidth; blk.classList.add('flash'); }
+  };
+});
+
+// 待办：只突出下一件
+let todos = [
+  { x: '《抵达之后》：定下每个镜头需要哪些图片', d: '第 3 天' },
+  { x: 'Think My Day：修掉输入框和计时行的记录噪音', d: '今天' },
+  { x: '回答「一年后想比现在强在哪」', d: '今天' },
+];
+let wins = ['OCR 改为按事件触发'];
+function renderTodos(justWon) {
+  const [first, ...rest] = todos;
+  $('#next').innerHTML = first ? `<div class="next"><div class="k">● 从这件开始</div><div class="t">${first.x}</div><div class="d">${first.d}</div>
+    <div class="acts"><button class="btn solid" id="done1">做完了</button><button class="btn ghost" id="skip1">换一件</button></div></div>`
+    : `<div class="next"><div class="t">待办都清空了。</div><div class="d">想到新的事，在下面加进来。</div></div>`;
+  if (first) {
+    $('#done1').onclick = () => { wins.unshift(todos.shift().x); renderTodos(true); };
+    $('#skip1').onclick = () => { todos.push(todos.shift()); renderTodos(); };
+  }
+  $('#later').style.display = rest.length ? '' : 'none';
+  $('#later-sum').textContent = `之后再做 · ${rest.length} 件`;
+  $('#later-list').innerHTML = rest.map((t, i) => `<div class="todo"><button class="check" data-i="${i + 1}" aria-label="完成"></button><div class="x">${t.x}<div class="d">${t.d}</div></div></div>`).join('');
+  $$('#later-list .check').forEach(b => b.onclick = () => { wins.unshift(todos.splice(+b.dataset.i, 1)[0].x); renderTodos(true); });
+  $('#wins-count').innerHTML = `${wins.length} <small style="font-size:14px;color:var(--text-3)">件</small>`;
+  $('#wins').innerHTML = wins.map((w, i) => `<li class="${justWon && i === 0 ? 'new' : ''}">${w}</li>`).join('');
+}
+$('#add').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing || !e.target.value.trim()) return;
+  todos.push({ x: e.target.value.trim(), d: '今天' }); e.target.value = ''; renderTodos();
+});
+renderTodos();
+hero();
+
+// 复盘：一次只问一个问题，答案用大按钮点选；今天这一档走完整的三步，最后给一个小结
+const Q1 = {
+  ask: '《抵达之后》写完 62 个镜头后又推翻了布局，场景从 3 个改成 9 个，还一张图都没出。你觉得卡在哪里？',
+  opts: ['不知道正确的流程', '说不清自己要什么', '在等结构完美', '都不是，我自己说'],
+  follow: { '不知道正确的流程': '再往下一层：你知道前一步「做好」长什么样吗？不知道的话，就看不出它没做好，只能先往下做，出问题再返工。同一晚的 Think My Day，你先弄懂原理再动手，就很顺。',
+    '说不清自己要什么': '那就不用描述：指出参考片里的某一帧，或者让 AI 给三个版本你来挑。', '在等结构完美': '如果先出几张图，你最怕看到的是什么？' },
+  lesson: { '不知道正确的流程': '不熟悉的事，先问流程和每一步做完的标准，再让 AI 动手。', '说不清自己要什么': '说不清的时候，用指认和挑选代替描述。' },
+};
+const Q2 = {
+  ask: '那明天打开《抵达之后》，第一步做什么？',
+  opts: ['问 AI 一个镜头的标准制作流程', '只做 1 个镜头，把流程走完', '先指出参考片里最喜欢的 3 帧', '我自己说'],
+  todo: true, reply: '好，已经放进待办的第一位，明天打开就能看到。',
+};
+const Q3 = { ask: '最后，今天整体感觉怎么样？', opts: ['推进得不错', '有点散', '很累', '说不上来'], reply: '收到。' };
+const R = {
+  today: { sub: '10 月 31 日 · 在电脑前 40 分', things: [['tmd', 45, '分', 'OCR 改动已合并，复盘方法写成文档'], ['film', 13, '分', '场景改成 9 处，还没出图'], ['x', 7, '分', '刷 X 和来回切换']],
+    open: '今天在电脑前大约 40 分钟，做了三件事。我们花两分钟看一件。', steps: [Q1, Q2, Q3] },
+  yesterday: { sub: '10 月 30 日 · 在电脑前 6 小时 12 分（示例）', things: [['tmd', 2.7, '时', '写完 UI 构思，出了 5 版设计图'], ['film', 1.8, '时', '整理制片手法库'], ['coin', 55, '分', '看 U 和 USD1 的补贴'], ['x', 47, '分', '']],
+    open: '昨天在电脑前 6 小时 12 分钟，时间最多的是界面构思。',
+    steps: [{ ask: '昨天出了 5 版设计图，最后也没定下来。是哪一点让你定不下来？', opts: ['没想清楚自己喜欢的风格', '每版都有一点不满意', '还没认真比较', '我自己说'], reply: '好，用你自己的话说说，下面输入就行。' }] },
+  week: { sub: '10 月 25 日 – 31 日 · 在电脑前 31 小时（示例）', things: [['tmd', 14, '时', '采集层做完，正在设计复盘和界面'], ['film', 7, '时', '知识库和编排，还没出图'], ['coin', 4, '时', ''], ['x', 3, '时', '']],
+    open: '这 7 天在电脑前 31 小时。有一个情况反复出现。',
+    steps: [{ ask: '《抵达之后》这周推进了 7 小时，但每次都在改结构。「前一步没定，先往下做，再回头返工」，在别的事上也出现过吗？', opts: ['出现过，Think My Day 早期也是', '只在这件事上', '不确定，帮我找找', '我自己说'], reply: '好，用你自己的话说说，下面输入就行。' }] },
+};
+R.custom = { ...R.week, sub: '10 月 25 日 – 31 日 · 自定义范围（示例）' };
+const mins = t => t[2] === '时' ? t[1] * 60 : t[1];
+const thingHTML = ([k, v, u, s]) => `<div class="thing" style="${cvars(k)}"><i>${icon(T[k][1])}</i><div class="nm">${T[k][2]}${s ? `<small>${s}</small>` : ''}</div><div class="tm">${v}<small>${u}</small></div></div>`;
+const who = '<div class="who"><i></i>复盘</div>';
+let run;
+function review(key) {
+  const r = R[key];
+  run = { r, picks: [], kept: false };
+  $('#range-sub').textContent = r.sub;
+  $('#custom').classList.toggle('show', key === 'custom');
+  const total = r.things.reduce((a, t) => a + mins(t), 0);
+  $('#stack').innerHTML = r.things.map(t => `<i style="${cvars(t[0])}; flex:${mins(t) / total}"></i>`).join('');
+  $('#r-list').innerHTML = r.things.map(t => `<div style="${cvars(t[0])}"><span>${T[t[0]][2]}</span><span class="n">${t[1]} ${t[2]}</span></div>`).join('');
+  $('#chat').innerHTML = `<div class="msg">${who}<p>${r.open}</p><div class="things">${r.things.map(thingHTML).join('')}</div></div>`;
+  ask(0);
+}
+function scrollDown() { const sc = $('#talk'); sc.scrollTo({ top: sc.scrollHeight, behavior: 'smooth' }); }
+function ask(i) {
+  const steps = run.r.steps, q = steps[i];
+  const bars = steps.length > 1 ? `<div class="step">第 ${i + 1} 个问题，共 ${steps.length} 个 ${steps.map((_, j) => `<i class="${j <= i ? 'on' : ''}"></i>`).join('')}</div>` : '';
+  $('#chat').insertAdjacentHTML('beforeend', `<div class="msg">${who}<div class="q">${bars}<h3>${q.ask}</h3><div class="opts" data-step="${i}">${q.opts.map(o => `<button>${o}</button>`).join('')}</div></div></div>`);
+  $$(`#chat .opts[data-step="${i}"] button`).forEach(b => b.onclick = () => answer(i, b));
+  scrollDown();
+}
+function answer(i, b) {
+  const q = run.r.steps[i], pick = b.textContent;
+  b.parentElement.classList.add('used'); b.classList.add('picked'); run.picks[i] = pick;
+  $('#chat').insertAdjacentHTML('beforeend', `<div class="me"><p>${pick}</p></div>`);
+  if (q.todo && !pick.includes('自己说')) { todos.unshift({ x: `《抵达之后》：${pick}`, d: '明天第一件' }); renderTodos(); }
+  setTimeout(() => {
+    const own = /自己说|说不上来/.test(pick);
+    $('#chat').insertAdjacentHTML('beforeend', `<div class="msg">${who}<p>${own ? '好，用你自己的话说说，下面输入就行。' : (q.follow?.[pick] || q.reply)}</p></div>`);
+    const lesson = q.lesson?.[pick];
+    if (lesson) {
+      $('#chat').insertAdjacentHTML('beforeend', `<div class="lesson"><div class="k">可以记成一条经验</div><blockquote>${lesson}</blockquote>
+        <div class="acts"><button class="btn solid" data-keep>记下来</button><button class="btn ghost" data-reword>我换个说法</button><button class="skip" data-skip>跳过</button></div></div>`);
+      const box = $('#chat .lesson:last-child');
+      $('[data-keep]', box).onclick = () => {
+        run.kept = lesson;
+        const seen = $$('#lessons li').some(li => li.firstChild.textContent === lesson);
+        if (!seen) $('#lessons').insertAdjacentHTML('afterbegin', `<li>${lesson}<small>刚刚</small></li>`);
+        $('.acts', box).innerHTML = `<span style="color:var(--text-3); font-size:13px">${seen ? '这条之前就记过，说明它很重要' : '已记下，放在右边'}</span>`; next(i);
+      };
+      $('[data-reword]', box).onclick = () => $('#compose input').focus();
+      $('[data-skip]', box).onclick = () => { $('.acts', box).remove(); next(i); };
+    } else if (!own) next(i);
+    scrollDown();
+  }, 450);
+}
+function next(i) {
+  const steps = run.r.steps;
+  setTimeout(() => {
+    if (i + 1 < steps.length) return ask(i + 1);
+    if (steps.length < 3) return;
+    $('#chat').insertAdjacentHTML('beforeend', `<div class="wrap-up"><h3>今天的复盘做完了</h3>
+      <div class="r"><span>一条经验</span><span>${run.kept || '这次没有记'}</span></div>
+      <div class="r"><span>明天第一步</span><span>${run.picks[1] && !run.picks[1].includes('自己说') ? `《抵达之后》：${run.picks[1]}` : '还没定'}</span></div>
+      <div class="r"><span>今天的状态</span><span>${run.picks[2] || ''}</span></div></div>`);
+    scrollDown();
+  }, 600);
+}
+$$('#range button').forEach(b => b.onclick = () => { $$('#range button').forEach(x => x.setAttribute('aria-pressed', x === b)); review(b.dataset.r); });
+$('#compose').onsubmit = e => {
+  e.preventDefault(); const inp = $('#compose input'); if (!inp.value.trim()) return;
+  $('#chat').insertAdjacentHTML('beforeend', `<div class="me"><p>${inp.value.replace(/</g, '&lt;')}</p></div>`); inp.value = ''; scrollDown();
+  // 自己说之后，接着下一步
+  const i = run.picks.length - 1;
+  if (i >= 0 && /自己说|说不上来/.test(run.picks[i]) && !run.answered?.[i]) { (run.answered ||= {})[i] = true; next(i); }
+};
+review('today');
+
+// 历史：每段的色条高度和时长成比例
+const week = [['日', 25], ['一', 26], ['二', 27], ['三', 28], ['四', 29], ['五', 30], ['六', 31]];
+const has = { 29: 1, 30: 1, 31: 1 };
+let day = 31, view = 'time';
+const ev = [
+  { k: 'mark', tm: '20:19', h: '开启一天' },
+  { t: 'film', tm: '20:19', m: 1, h: '看了一眼《抵达之后》的进度', p: 'ChatGPT 正在重建提示词。' },
+  { t: 'x', tm: '20:20', m: 2, h: '刷 X', p: '点开一条讲「如何拉开差距」的帖子。', det: [['20:20', '打开 X 首页'], ['20:21', '看了 U.Tech 的主页'], ['20:21', '读到「绝对聚焦」那一条']] },
+  { t: 'tmd', tm: '20:22', m: 8, h: 'Think My Day：问采集原理', p: '事件触发、AXObserver、窗口重叠、什么时候读不到文字。', det: [['20:23', '写：<q>所以我在做的是一个事件触发型监控</q>'], ['20:28', '写：<q>前后两个窗口有重叠……</q>']] },
+  { t: 'film', tm: '20:30', m: 5, h: '《抵达之后》：对页面提意见', p: '觉得「逐镜编排」太挤，问清镜头和场景的关系。', det: [['20:32', '写：<q>你的这个页面的布局，我很不喜欢</q>'], ['20:34', '写：<q>逐镜编排那个区域堆了太多东西了……</q>']] },
+  { t: 'tmd', tm: '20:35', m: 6, h: 'Think My Day：继续读原理', p: '辅助功能、AppKit、焦点窗口。' },
+  { t: 'x', tm: '20:41', m: 5, h: '来回切换', p: '5 分钟里换了 10 次以上。' },
+  { t: 'film', tm: '20:46', m: 4, h: '《抵达之后》：让 AI 查知识库', p: '场景从 3 个改成 9 个。' },
+  { t: 'tmd', tm: '20:50', m: 7, h: 'Think My Day：OCR 改为按事件触发', p: '改完、提交、合并。做成了一件事。' },
+  { t: 'away', tm: '20:57', m: 40, h: '离开电脑', p: '21:17 锁屏，21:37 回来。' },
+  { t: 'film', tm: '21:37', m: 2, h: '《抵达之后》：问每个镜头要哪些图', p: '还没有答案。' },
+  { k: 'mark', tm: '21:39', h: '结束一天' },
+];
+function days() {
+  $('#days').innerHTML = week.map(([w, d]) => `<button class="day ${has[d] ? '' : 'none'}" aria-pressed="${d === day}" data-d="${d}">周${w}<b>${d}</b><i></i></button>`).join('');
+  $$('#days .day').forEach(b => b.onclick = () => { day = +b.dataset.d; days(); hist(); });
+}
+function hist() {
+  const el = $('#hist-body');
+  if (!has[day]) { el.innerHTML = `<div class="nothing">10 月 ${day} 日没有开启。</div>`; return; }
+  if (day !== 31) { el.innerHTML = `<div class="nothing">示例里只有 10 月 31 日的详细记录。</div>`; return; }
+  const sum = `<div class="dsum"><div><div class="v">20:19</div><div class="k">开启</div></div><div><div class="v">21:39</div><div class="k">结束</div></div><div><div class="v">40<small>分</small></div><div class="k">在电脑前</div></div><div><div class="v">40<small>分</small></div><div class="k">离开</div></div><div><div class="v">3<small>件</small></div><div class="k">事情</div></div></div>`;
+  if (view === 'thing') {
+    el.innerHTML = sum + `<div class="flow"><div class="things">${[['tmd', 45, '分', '问清原理，OCR 改动合并'], ['film', 13, '分', '对页面提意见，场景改成 9 处'], ['x', 7, '分', '刷 X 和来回切换'], ['away', 40, '分', '20:57–21:37']].map(thingHTML).join('')}</div></div>`;
+    return;
+  }
+  el.innerHTML = sum + `<div class="flow">${ev.map((e, i) => {
+    if (e.k === 'mark') return `<div class="blk mark"><div class="tm">${e.tm}</div><div class="cap"><i></i></div><div class="bd"><h4>${e.h}</h4></div></div>`;
+    const h = Math.min(Math.max(e.m * 9, 48), 150);
+    return `<div class="blk ${e.t === 'away' ? 'away' : ''}" data-tm="${e.tm}" style="${cvars(e.t)}"><div class="tm">${e.tm}</div>
+      <div class="cap" style="min-height:${h}px"><i>${icon(T[e.t][1])}</i></div>
+      <div class="bd"><h4>${e.h}<small>${e.m} 分</small></h4><p>${e.p}</p>
+        ${e.det ? `<button class="more" data-i="${i}">看细节</button><ul class="det" id="d${i}">${e.det.map(([t, s]) => `<li><span>${t}</span><span>${s}</span></li>`).join('')}</ul>` : ''}</div></div>`;
+  }).join('')}</div>`;
+  $$('#hist-body .more').forEach(b => b.onclick = () => { const d = $('#d' + b.dataset.i); d.classList.toggle('open'); b.textContent = d.classList.contains('open') ? '收起' : '看细节'; });
+}
+$$('#view button').forEach(b => b.onclick = () => { view = b.dataset.v; $$('#view button').forEach(x => x.setAttribute('aria-pressed', x === b)); hist(); });
+days(); hist();
+</script>
+</body>
+</html>

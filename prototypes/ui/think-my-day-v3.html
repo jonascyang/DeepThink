@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Think My Day 原型 v3</title>
+<style>
+/*
+  设计方向「纸与墨」：像一本安静的日记。
+  - 不用卡片，靠留白、细线和字号层级分区。
+  - 颜色来自同一个概念：纸色底、墨色字、一点朱红（像印章）只用在「此刻」上：呼吸灯、当前时刻、经验的印记。
+  - 事情的四种颜色是同一明度、低饱和的「颜料」：靛、赭、苔、豆沙。
+  - 标题和数字用宋体 / New York，正文用苹方。
+*/
+:root, [data-theme="light"] {
+  --desk: #e4dfd5;
+  --paper: #f5f2eb; --paper-2: #efebe2;
+  --ink: #1c1b19; --ink-2: #4a4741; --ink-3: #8a857b; --ink-4: #b8b2a6;
+  --rule: rgba(28,27,25,.11); --rule-2: rgba(28,27,25,.22);
+  --seal: #c4432a; --seal-soft: rgba(196,67,42,.09);
+  --t1: #2e4c6d; --t2: #a26b2e; --t3: #6b7454; --t4: #8c5468;
+  --shadow: 0 1px 1px rgba(40,32,20,.04), 0 30px 80px -20px rgba(40,32,20,.22);
+}
+[data-theme="dark"] {
+  --desk: #0d0c0b;
+  --paper: #171614; --paper-2: #1b1a17;
+  --ink: #ebe6dc; --ink-2: #c0baae; --ink-3: #8a857b; --ink-4: #5b574f;
+  --rule: rgba(235,230,220,.09); --rule-2: rgba(235,230,220,.18);
+  --seal: #e0613f; --seal-soft: rgba(224,97,63,.12);
+  --t1: #86a6c8; --t2: #d3a464; --t3: #a6b08a; --t4: #c48fa3;
+  --shadow: 0 1px 1px rgba(0,0,0,.3), 0 30px 80px -20px rgba(0,0,0,.7);
+}
+:root {
+  --serif: "Songti SC", "STSong", "New York", ui-serif, Georgia, serif;
+  --num: ui-serif, "New York", Baskerville, "Songti SC", serif;
+  --num-big: "Didot", "Bodoni 72", ui-serif, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--desk); color: var(--ink); font: 13.5px/1.7 var(--sans);
+  -webkit-font-smoothing: antialiased; min-height: 100vh; padding: 32px 16px 48px;
+  display: flex; justify-content: center; transition: background .5s ease, color .5s ease;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+::selection { background: var(--seal-soft); }
+.num { font-family: var(--num); font-variant-numeric: tabular-nums lining-nums; }
+
+.window {
+  width: min(1200px, 100%); height: 780px; display: flex; overflow: hidden;
+  background: var(--paper); border-radius: 12px; box-shadow: var(--shadow); transition: background .5s ease;
+}
+
+/* 侧栏：同一张纸，稍深一点，用一条细线分开 */
+.sidebar { width: 208px; flex: none; background: var(--paper-2); border-right: 1px solid var(--rule); display: flex; flex-direction: column; padding: 16px 0 20px; transition: background .5s ease; }
+.traffic { display: flex; gap: 8px; padding: 0 18px 30px; }
+.traffic i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.traffic i:nth-child(1) { background: #ff5f57; } .traffic i:nth-child(2) { background: #febc2e; } .traffic i:nth-child(3) { background: #28c840; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 22px 34px; font-family: var(--serif); font-size: 15px; letter-spacing: .02em; white-space: nowrap; }
+.seal-mark { width: 20px; height: 20px; background: var(--seal); color: var(--paper); border-radius: 3px; display: grid; place-items: center; font: 600 11px/1 var(--serif); }
+.nav { display: flex; flex-direction: column; }
+.nav button { position: relative; text-align: left; padding: 7px 22px; color: var(--ink-3); letter-spacing: .04em; transition: color .2s; white-space: nowrap; }
+.nav button:hover { color: var(--ink); }
+.nav button[aria-current="page"] { color: var(--ink); }
+.nav button[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 2px; background: var(--ink); }
+.nav button:disabled { cursor: default; color: var(--ink-4); }
+.side-foot { margin-top: auto; padding: 0 22px; }
+.side-status { display: flex; align-items: center; gap: 9px; color: var(--ink-2); }
+.side-time { font-size: 20px; margin: 2px 0 14px 17px; color: var(--ink); letter-spacing: .01em; }
+.theme { display: flex; gap: 12px; padding-top: 14px; border-top: 1px solid var(--rule); color: var(--ink-3); font-size: 12px; }
+.theme button[aria-pressed="true"] { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+
+/* 呼吸灯：朱红的一点，外圈像墨在纸上慢慢晕开 */
+.dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--seal); flex: none; animation: breathe 3.6s ease-in-out infinite; }
+.dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--seal); animation: halo 3.6s ease-out infinite; }
+.dot.ink { background: var(--ink-3); }
+.dot.ink::after { background: var(--ink-3); }
+.dot.off { background: var(--ink-4); animation: none; }
+.dot.off::after { display: none; }
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes halo { 0% { transform: scale(1); opacity: .35; } 75%, 100% { transform: scale(3.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dot, .dot::after { animation: none; } .dot::after { display: none; } }
+
+/* 版面 */
+.main { flex: 1; min-width: 0; display: flex; }
+.page { display: none; flex: 1; min-width: 0; min-height: 0; }
+.page.active { display: flex; }
+.scroll { overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--rule-2) transparent; }
+.col-main { flex: 1; min-width: 0; padding: 40px 56px 56px; }
+.col-side { width: 290px; flex: none; border-left: 1px solid var(--rule); padding: 40px 32px 40px; }
+.kicker { font-size: 11px; letter-spacing: .24em; color: var(--ink-3); }
+.section { margin-top: 46px; }
+.section-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+.section-head h2 { margin: 0; font: 400 13px/1 var(--serif); letter-spacing: .2em; color: var(--ink-2); white-space: nowrap; }
+.section-head::after { content: ""; flex: 1; height: 1px; background: var(--rule); transform: translateY(-4px); }
+.section-head .aside { order: 2; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.title { margin: 0; font: 400 26px/1.3 var(--serif); letter-spacing: .04em; }
+.link { color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 5px; text-decoration-thickness: 1px; transition: text-decoration-color .2s; }
+.link:hover { text-decoration-color: var(--ink); }
+.solid { background: var(--ink); color: var(--paper); padding: 10px 26px; border-radius: 2px; letter-spacing: .12em; transition: opacity .2s; }
+.solid:hover { opacity: .86; }
+
+/* 今天 */
+.status-line { display: flex; align-items: center; gap: 10px; color: var(--ink-2); margin-top: 26px; letter-spacing: .06em; }
+.timer { font-family: var(--num-big); font-weight: 400; font-size: 84px; line-height: 1; letter-spacing: -.01em; margin: 14px 0 18px; font-variant-numeric: tabular-nums lining-nums; }
+.facts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 30px; color: var(--ink-3); }
+.facts b { font: 400 16px var(--num); color: var(--ink); margin-left: 6px; font-variant-numeric: tabular-nums; }
+.facts .end { margin-left: auto; }
+.idle-title { font: 400 40px/1.25 var(--serif); letter-spacing: .04em; margin: 18px 0 10px; }
+.idle-sub { color: var(--ink-3); margin-bottom: 26px; }
+
+.rows { list-style: none; margin: 0; padding: 0; }
+.row { display: grid; grid-template-columns: 3px 1fr auto; gap: 0 18px; padding: 16px 0; border-bottom: 1px solid var(--rule); align-items: start; }
+.row::before { content: ""; background: var(--tc); height: 22px; margin-top: 3px; border-radius: 2px; }
+.row h3 { margin: 0; font: 400 17px/1.45 var(--serif); letter-spacing: .02em; }
+.row .sub { color: var(--ink-3); display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+.row .sub .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-4); }
+.row .t { font: 400 17px/1.45 var(--num); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.row .t small { font: 12px var(--sans); color: var(--ink-3); margin-left: 3px; }
+.after { margin-top: 12px; color: var(--ink-3); font-size: 12.5px; }
+
+/* 今天的时间：真正按时刻排开的一条时间轴 */
+.strip { position: relative; height: 16px; margin-top: 22px; background: linear-gradient(var(--rule), var(--rule)) 0 50% / 100% 1px no-repeat; }
+.strip i { position: absolute; top: 0; height: 100%; background: var(--tc); border-radius: 1px; }
+.strip i.away { background: repeating-linear-gradient(90deg, var(--rule-2) 0 1px, transparent 1px 5px); top: 4px; height: 8px; }
+.strip .now { position: absolute; top: -6px; bottom: -6px; width: 1px; background: var(--seal); }
+.strip .now::after { content: "此刻"; position: absolute; top: -18px; left: -12px; font-size: 10.5px; color: var(--seal); letter-spacing: .1em; white-space: nowrap; }
+.ticks { position: relative; height: 18px; margin-top: 8px; font: 11px var(--num); color: var(--ink-3); }
+.ticks span { position: absolute; transform: translateX(-50%); }
+.ticks span:first-child { transform: none; }
+.key { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 18px; color: var(--ink-3); }
+.key span { display: flex; align-items: baseline; gap: 8px; }
+.key span::before { content: ""; width: 10px; height: 3px; background: var(--tc); align-self: center; border-radius: 1px; }
+.key span.away::before { background: repeating-linear-gradient(90deg, var(--ink-4) 0 1px, transparent 1px 3px); }
+.key b { font: 400 15px var(--num); color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* 待办 */
+.todo-add { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--rule-2); padding: 8px 0 9px; margin: 18px 0 6px; color: var(--ink-3); transition: border-color .2s; }
+.todo-add:focus-within { border-color: var(--ink); }
+.todo-add input { flex: 1; min-width: 0; border: 0; outline: none; background: none; }
+.todo-add input::placeholder { color: var(--ink-4); }
+.todos { list-style: none; margin: 0; padding: 0; }
+.todo { display: grid; grid-template-columns: 15px 1fr; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--rule); }
+.check { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--ink-3); margin-top: 4px; display: grid; place-items: center; transition: border-color .2s, background .2s; }
+.check:hover { border-color: var(--ink); }
+.todo.done .check { background: var(--ink); border-color: var(--ink); }
+.todo.done .check::after { content: ""; width: 6px; height: 3px; border: 1.2px solid var(--paper); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+.todo .x { line-height: 1.55; }
+.todo.done .x { color: var(--ink-4); text-decoration: line-through; text-decoration-thickness: 1px; }
+.todo .d { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
+.todo .d.long { color: var(--seal); }
+.done-head { margin: 26px 0 0; font-size: 11px; letter-spacing: .24em; color: var(--ink-3); }
+
+/* 复盘 */
+.tabs { display: flex; gap: 22px; margin-top: 14px; color: var(--ink-3); }
+.tabs button { padding: 2px 0 6px; border-bottom: 1px solid transparent; letter-spacing: .04em; transition: color .2s, border-color .2s; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
+.range-desc { margin-top: 10px; color: var(--ink-3); }
+.range-desc b { font: 400 14px var(--num); color: var(--ink); }
+.custom { display: none; gap: 10px; align-items: center; margin-top: 10px; color: var(--ink-3); }
+.custom.show { display: flex; }
+.custom input { border: 0; border-bottom: 1px solid var(--rule-2); background: none; font-family: var(--num); padding: 2px 0; }
+.review-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.review-head { padding: 40px 56px 22px; border-bottom: 1px solid var(--rule); }
+.review-body { flex: 1; display: flex; min-height: 0; }
+.transcript { flex: 1; padding: 32px 56px 24px; }
+.transcript-inner { max-width: 620px; }
+.say { margin: 0 0 30px; }
+.say .who { font-size: 11px; letter-spacing: .24em; color: var(--ink-3); margin-bottom: 6px; }
+.say p { margin: 0; color: var(--ink); }
+.say .rows { margin-top: 10px; }
+.say .row { padding: 12px 0; }
+.say .row h3 { font-size: 15.5px; }
+.say .row .t { font-size: 15px; }
+.ask { margin-top: 14px; padding-left: 20px; border-left: 2px solid var(--seal); }
+.ask q { display: block; font: 400 17px/1.75 var(--serif); quotes: none; letter-spacing: .02em; }
+.opts { list-style: none; margin: 14px 0 0; padding: 0; counter-reset: opt; }
+.opts button { display: flex; gap: 14px; width: 100%; text-align: left; padding: 8px 0; color: var(--ink-2); border-bottom: 1px solid var(--rule); transition: color .2s, padding .2s; }
+.opts button::before { counter-increment: opt; content: counter(opt); font-family: var(--num); color: var(--ink-3); width: 10px; }
+.opts button:hover { color: var(--ink); padding-left: 4px; }
+.opts.used button { pointer-events: none; color: var(--ink-4); }
+.opts.used button.picked { color: var(--ink); }
+.opts.used button.picked::before { color: var(--seal); }
+.me { margin: 0 0 30px; text-align: right; }
+.me .who { font-size: 11px; letter-spacing: .24em; color: var(--ink-3); margin-bottom: 4px; }
+.me p { margin: 0; display: inline-block; max-width: 80%; text-align: left; color: var(--ink-2); font-family: var(--serif); font-size: 15px; }
+.lesson { margin: 4px 0 34px; display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: start; }
+.stamp { border: 1.5px solid var(--seal); color: var(--seal); font: 600 12px/1 var(--serif); padding: 7px 5px; writing-mode: vertical-rl; letter-spacing: .3em; border-radius: 2px; transform: rotate(-3deg); }
+.lesson blockquote { margin: 0; font: 400 19px/1.65 var(--serif); letter-spacing: .02em; }
+.lesson .acts { margin-top: 10px; display: flex; gap: 22px; font-size: 12.5px; }
+.composer { border-top: 1px solid var(--rule); padding: 16px 56px 22px; }
+.composer form { max-width: 620px; display: flex; gap: 16px; align-items: center; }
+.composer input { flex: 1; min-width: 0; border: 0; outline: none; background: none; padding: 8px 0; }
+.composer input::placeholder { color: var(--ink-4); }
+.review-side { width: 280px; flex: none; border-left: 1px solid var(--rule); padding: 32px 30px; }
+.bars { margin-top: 14px; }
+.bar { margin-bottom: 14px; }
+.bar .l { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; }
+.bar .l span:last-child { font-family: var(--num); color: var(--ink-2); white-space: nowrap; }
+.bar .track { height: 2px; background: var(--rule); margin-top: 6px; }
+.bar .track i { display: block; height: 100%; background: var(--tc); }
+.lessons { list-style: none; margin: 14px 0 0; padding: 0; }
+.lessons li { font: 400 14px/1.7 var(--serif); padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.lessons li small { display: block; font: 11.5px var(--sans); color: var(--ink-3); margin-top: 4px; }
+.lessons li.new { animation: ink-in .8s ease; }
+@keyframes ink-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* 历史 */
+.history-head { padding: 40px 56px 0; }
+.dates { display: flex; gap: 6px; margin-top: 22px; }
+.date { width: 54px; padding: 6px 0 10px; text-align: center; color: var(--ink-3); border-bottom: 1px solid var(--rule); transition: color .2s, border-color .2s; }
+.date b { display: block; font: 400 22px/1.2 var(--num); color: var(--ink-2); }
+.date i { display: block; width: 3px; height: 3px; margin: 6px auto 0; border-radius: 50%; background: var(--ink-3); }
+.date.none { color: var(--ink-4); } .date.none b { color: var(--ink-4); } .date.none i { visibility: hidden; }
+.date:hover b { color: var(--ink); }
+.date[aria-pressed="true"] { border-color: var(--ink); }
+.date[aria-pressed="true"] b { color: var(--ink); }
+.date[aria-pressed="true"] i { background: var(--seal); }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 36px; padding: 22px 56px; border-bottom: 1px solid var(--rule); color: var(--ink-3); }
+.summary b { font: 400 18px var(--num); color: var(--ink); margin-left: 8px; font-variant-numeric: tabular-nums; }
+.history-tabs { display: flex; justify-content: space-between; align-items: baseline; }
+.tl-wrap { padding: 26px 56px 60px; }
+.tl { display: grid; grid-template-columns: 54px 22px 1fr; max-width: 760px; }
+.tl .tm { text-align: right; font: 400 14px/1.4 var(--num); color: var(--ink-2); padding-top: 3px; font-variant-numeric: tabular-nums; }
+.tl .tm small { display: block; font: 11.5px var(--sans); color: var(--ink-3); }
+.tl .rail { position: relative; }
+.tl .rail::before { content: ""; position: absolute; left: 10px; top: 0; bottom: 0; width: 1px; background: var(--rule-2); }
+.tl .rail i { position: absolute; left: 7px; top: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 4px var(--paper); }
+.tl .body { padding: 0 0 28px 8px; }
+.tl h4 { margin: 0; font: 400 16px/1.5 var(--serif); letter-spacing: .02em; }
+.tl p { margin: 3px 0 0; color: var(--ink-2); }
+.tl .meta { margin-top: 5px; font-size: 12px; color: var(--ink-3); }
+.tl .meta em { font-style: normal; color: var(--t1); }
+.tl .more { margin-top: 6px; font-size: 12px; }
+.tl .details { display: none; margin: 10px 0 0; padding: 0; list-style: none; border-left: 1px solid var(--rule-2); padding-left: 14px; }
+.tl .details.open { display: block; }
+.tl .details li { display: grid; grid-template-columns: 42px 1fr; gap: 8px; color: var(--ink-3); font-size: 12.5px; padding: 2px 0; }
+.tl .details li span:first-child { font-family: var(--num); }
+.tl .details q { color: var(--ink); font-family: var(--serif); quotes: "「" "」"; }
+.tl.gap .rail::before { background: repeating-linear-gradient(var(--ink-4) 0 3px, transparent 3px 7px); }
+.tl.gap .rail i { background: var(--paper); border: 1px solid var(--ink-3); }
+.tl.gap h4 { color: var(--ink-3); font-style: italic; }
+.tl.gap p { color: var(--ink-3); }
+.tl.mark h4 { font: 400 11px/2 var(--sans); letter-spacing: .24em; color: var(--ink-3); }
+.tl.mark .rail i { background: var(--ink); width: 9px; height: 9px; left: 6px; top: 7px; border-radius: 1px; }
+.tl.mark .body { padding-bottom: 22px; }
+.nothing { padding: 70px 56px; color: var(--ink-3); font-family: var(--serif); font-size: 16px; }
+
+@media (max-width: 860px) {
+  body { padding: 0; }
+  .window { height: auto; min-height: 100vh; border-radius: 0; flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--rule); overflow-x: auto; }
+  .traffic, .side-time, .side-status { display: none; }
+  .brand { padding: 0 16px 0 0; }
+  .nav { flex-direction: row; }
+  .nav button { padding: 6px 10px; }
+  .nav button[aria-current="page"]::before { left: 10px; right: 10px; top: auto; bottom: 0; width: auto; height: 2px; }
+  .side-foot { margin: 0 0 0 auto; padding: 0; }
+  .theme { border: 0; padding: 0; }
+  .page { flex-direction: column; }
+  .col-main, .review-head, .transcript, .composer, .history-head, .tl-wrap { padding-left: 16px; padding-right: 16px; }
+  .summary { padding: 18px 16px; }
+  .col-side, .review-side { width: auto; border-left: 0; border-top: 1px solid var(--rule); padding: 28px 16px; }
+  .review-body { flex-direction: column; }
+  .timer { font-size: 60px; }
+  .facts .end { margin-left: 0; }
+  .dates { overflow-x: auto; }
+  .tl { grid-template-columns: 44px 22px 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="window">
+  <aside class="sidebar">
+    <div class="traffic"><i></i><i></i><i></i></div>
+    <div class="brand"><span class="seal-mark">日</span>Think My Day</div>
+    <nav class="nav" aria-label="功能">
+      <button data-page="home" aria-current="page">今天</button>
+      <button data-page="review">复盘</button>
+      <button data-page="history">历史</button>
+      <button disabled>设置</button>
+    </nav>
+    <div class="side-foot">
+      <div class="side-status"><span class="dot" data-dot></span><span data-word>正在记录</span></div>
+      <div class="side-time num" data-side-time>1:20:00</div>
+      <div class="theme" aria-label="外观">
+        <button data-theme-set="light" aria-pressed="true">纸</button>
+        <button data-theme-set="dark" aria-pressed="false">夜读</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- 今天 -->
+    <section class="page active" id="home">
+      <div class="col-main scroll">
+        <div class="kicker">十月三十一日　星期六</div>
+        <div id="status"></div>
+
+        <div class="section">
+          <div class="section-head"><h2>正在并行</h2></div>
+          <ul class="rows">
+            <li class="row" style="--tc: var(--t1)">
+              <div><h3>Think My Day：采集原理与复盘设计</h3>
+                <div class="sub"><span class="dot"></span>正在操作<span class="sep"></span>做到：复盘方法写成文档，开始设计界面</div></div>
+              <div class="t">45<small>分</small></div>
+            </li>
+            <li class="row" style="--tc: var(--t2)">
+              <div><h3>《抵达之后》制作编排</h3>
+                <div class="sub"><span class="dot ink"></span>AI 在后台处理<span class="sep"></span>做到：场景改成 9 处，还没出图</div></div>
+              <div class="t">13<small>分</small></div>
+            </li>
+          </ul>
+          <div class="after">刚才还做过：刷 X 2 分钟，看了一眼 Grok 的理财日报。</div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><h2>今天的时间</h2><span class="aside">20:00 – 22:00</span></div>
+          <div class="strip" id="strip"></div>
+          <div class="ticks"><span style="left:0">20:00</span><span style="left:25%">20:30</span><span style="left:50%">21:00</span><span style="left:75%">21:30</span><span style="left:100%;transform:translateX(-100%)">22:00</span></div>
+          <div class="key">
+            <span style="--tc: var(--t1)">Think My Day <b>45</b> 分</span>
+            <span style="--tc: var(--t2)">《抵达之后》 <b>13</b> 分</span>
+            <span style="--tc: var(--t3)">刷 X 与零碎切换 <b>7</b> 分</span>
+            <span class="away">离开 <b>40</b> 分</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="col-side scroll">
+        <div class="section-head"><h2>待办</h2></div>
+        <label class="todo-add">＋<input id="todo-input" placeholder="添加一件待办，回车确认"></label>
+        <ul class="todos" id="todos"></ul>
+      </aside>
+    </section>
+
+    <!-- 复盘 -->
+    <section class="page" id="review">
+      <div class="review-wrap">
+        <header class="review-head">
+          <h1 class="title">复盘</h1>
+          <div class="tabs" id="range">
+            <button data-range="today" aria-pressed="true">今天</button>
+            <button data-range="yesterday" aria-pressed="false">昨天</button>
+            <button data-range="week" aria-pressed="false">最近七天</button>
+            <button data-range="custom" aria-pressed="false">自定义</button>
+          </div>
+          <div class="custom" id="custom"><input type="date" value="2026-10-25"> 至 <input type="date" value="2026-10-31"></div>
+          <div class="range-desc" id="range-desc"></div>
+        </header>
+        <div class="review-body">
+          <div style="flex:1; display:flex; flex-direction:column; min-width:0">
+            <div class="transcript scroll" style="flex:1"><div class="transcript-inner" id="chat"></div></div>
+            <div class="composer">
+              <form id="composer"><input placeholder="回答、补充，或者问「这周我在《抵达之后》上花了多久」"><button class="link" type="submit">发送</button></form>
+            </div>
+          </div>
+          <aside class="review-side scroll">
+            <div class="section-head"><h2>这段时间</h2></div>
+            <div class="bars" id="bars"></div>
+            <div class="section" style="margin-top:36px">
+              <div class="section-head"><h2>经验</h2></div>
+              <ul class="lessons" id="lessons">
+                <li>不熟悉的事，先问流程和每一步做完的标准，再让 AI 动手。<small>10月31日 ·《抵达之后》</small></li>
+                <li>先说出自己喜欢什么，再让 AI 动手。<small>10月31日 ·《抵达之后》</small></li>
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- 历史 -->
+    <section class="page" id="history">
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0">
+        <header class="history-head">
+          <div class="history-tabs">
+            <h1 class="title">历史</h1>
+            <div class="tabs" id="view" style="margin:0">
+              <button data-view="time" aria-pressed="true">按时间</button>
+              <button data-view="thing" aria-pressed="false">按事情</button>
+            </div>
+          </div>
+          <div class="dates" id="dates"></div>
+        </header>
+        <div class="scroll" style="flex:1" id="history-body"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const pad = n => String(n).padStart(2, '0');
+const clock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; };
+
+// 外观
+$$('[data-theme-set]').forEach(b => b.onclick = () => {
+  document.documentElement.dataset.theme = b.dataset.themeSet;
+  $$('[data-theme-set]').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+
+// 导航
+$$('.nav button[data-page]').forEach(b => b.onclick = () => {
+  $$('.nav button[data-page]').forEach(x => x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current'));
+  $$('.page').forEach(p => p.classList.toggle('active', p.id === b.dataset.page));
+});
+
+// 一天的状态。示例里的开启时刻固定为 20:19，计时从打开页面时的 1:20:00 往上走
+const state = { day: 'live', start: Date.now() - 80 * 60000, end: null, startLabel: '20:19' };
+const endLabel = () => { const [h, m] = state.startLabel.split(':').map(Number); const t = h * 60 + m + Math.round((state.end - state.start) / 60000); return `${pad(Math.floor(t / 60) % 24)}:${pad(t % 60)}`; };
+const nowLabel = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+function renderStatus() {
+  const el = $('#status');
+  if (state.day === 'idle') {
+    el.innerHTML = `<div class="status-line"><span class="dot off"></span>还没有开启</div>
+      <div class="idle-title">新的一天，从这里开始。</div>
+      <div class="idle-sub">计划 09:00 开始。开启之后才开始记录；不看名单里的 App 不会被记录。</div>
+      <button class="solid" id="start">开启一天</button>`;
+    $('#start').onclick = () => { Object.assign(state, { day: 'live', start: Date.now(), end: null, startLabel: nowLabel() }); sync(true); };
+    return;
+  }
+  const live = state.day === 'live';
+  const sample = state.startLabel === '20:19';
+  el.innerHTML = `<div class="status-line"><span class="dot ${live ? '' : 'off'}"></span>${live ? '正在记录' : '今天已结束'}</div>
+    <div class="timer" data-timer>${clock((live ? Date.now() : state.end) - state.start)}</div>
+    <div class="facts">
+      <span>开启<b>${state.startLabel}</b></span>${live ? '' : `<span>结束<b>${endLabel()}</b></span>`}
+      ${sample ? '<span>在电脑前<b>40</b> 分</span><span>离开<b>40</b> 分</span>' : ''}
+      ${live ? '<button class="link end" id="end">结束一天</button>' : '<button class="link end" id="again">开启新的一天</button>'}
+    </div>`;
+  if (live) $('#end').onclick = () => { state.day = 'ended'; state.end = Date.now(); sync(true); };
+  else $('#again').onclick = () => { state.day = 'idle'; sync(true); };
+}
+function sync(full) {
+  if (full) renderStatus();
+  const live = state.day === 'live';
+  const t = $('[data-timer]');
+  if (t && live) t.textContent = clock(Date.now() - state.start);
+  $('[data-dot]').classList.toggle('off', !live);
+  $('[data-word]').textContent = { idle: '还没有开启', live: '正在记录', ended: '今天已结束' }[state.day];
+  $('[data-side-time]').textContent = state.day === 'idle' ? '—' : clock((live ? Date.now() : state.end) - state.start);
+}
+renderStatus(); sync(); setInterval(sync, 1000);
+
+// 今天的时间轴：20:00–22:00 共 120 分钟，按真实时刻排开
+const spans = [[19, 20, 't2'], [20, 22, 't3'], [22, 30, 't1'], [30, 35, 't2'], [35, 41, 't1'], [41, 46, 't3'], [46, 50, 't2'], [50, 57, 't1'], [57, 97, 'away'], [97, 99, 't2']];
+$('#strip').innerHTML = spans.map(([a, b, c]) => `<i class="${c === 'away' ? 'away' : ''}" style="left:${a / 120 * 100}%; width:${(b - a) / 120 * 100}%; --tc: var(--${c})"></i>`).join('') + `<span class="now" style="left:${99 / 120 * 100}%"></span>`;
+
+// 待办
+const todos = [
+  { x: '《抵达之后》：定下每个镜头需要哪些图片', d: '第 3 天', long: true },
+  { x: 'Think My Day：修掉输入框和计时行的记录噪音', d: '今天' },
+  { x: '回答「一年后想比现在强在哪」', d: '今天' },
+  { x: 'OCR 改为按事件触发', d: '今天完成', done: true },
+];
+function renderTodos() {
+  const row = t => `<li class="todo ${t.done ? 'done' : ''}"><button class="check" aria-label="${t.done ? '取消完成' : '完成'}" data-i="${todos.indexOf(t)}"></button><div><div class="x">${t.x}</div><div class="d ${t.long && !t.done ? 'long' : ''}">${t.d}</div></div></li>`;
+  const open = todos.filter(t => !t.done), done = todos.filter(t => t.done);
+  $('#todos').innerHTML = open.map(row).join('') + (done.length ? `<li class="done-head">今天完成</li>${done.map(row).join('')}` : '');
+  $$('#todos .check').forEach(b => b.onclick = () => { const t = todos[b.dataset.i]; t.done = !t.done; t.d = t.done ? '今天完成' : '今天'; renderTodos(); });
+}
+$('#todo-input').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.isComposing || !e.target.value.trim()) return;
+  todos.unshift({ x: e.target.value.trim(), d: '今天' }); e.target.value = ''; renderTodos();
+});
+renderTodos();
+
+// 复盘
+const ranges = {
+  today: {
+    desc: '十月三十一日　在电脑前 <b>40</b> 分　三件事情',
+    things: [['Think My Day：采集原理与复盘设计', 45, '分', 't1', 'OCR 改动已合并，复盘方法写成文档'], ['《抵达之后》制作编排', 13, '分', 't2', '场景从 3 个改成 9 个，还没出图'], ['刷 X', 2, '分', 't3', '看了一条讲「聚焦」的帖子']],
+    open: '今天 20:19 开启，在电脑前大约 40 分钟，中间离开了 40 分钟。做了这几件事：',
+    ask: '《抵达之后》里，62 个镜头写完后又推翻了布局，场景从 3 个改成 9 个，还一张图都没出。你觉得卡在哪里？',
+    opts: ['不知道正确的流程', '说不清自己要什么', '在等结构完美', '都不是，我来说'],
+    follow: {
+      '不知道正确的流程': '再往下一层：你知道前一步「做好」是什么样子吗？不知道的话，就判断不出它其实没做好，只能先往下做，出了问题再返工。同一晚的 Think My Day，你是先弄懂原理再动手，推进得很顺。',
+      '说不清自己要什么': '说不清的时候，可以不描述：指出参考片里的某一帧，或者让 AI 给三个版本你来挑。你最喜欢参考片的哪一样？',
+      '在等结构完美': '如果先出几张图，你最怕看到的是什么？',
+    },
+    lesson: '不熟悉的事，先问流程和每一步做完的标准，再让 AI 动手。',
+  },
+  yesterday: {
+    desc: '十月三十日　在电脑前 <b>6</b> 小时 <b>12</b> 分　五件事情（示例）',
+    things: [['Think My Day：UI 构思', 2.7, '时', 't1', '写完 UI 构思 v1，出了 5 版设计图'], ['《抵达之后》知识库', 1.8, '时', 't2', '整理 CRCR × Riot 制片手法库'], ['稳定币资讯', 55, '分', 't4', ''], ['刷 X', 47, '分', 't3', '']],
+    open: '昨天你在电脑前 6 小时 12 分钟，最多的时间给了界面构思：',
+    ask: '昨天出了 5 版设计图，最后一版也没定下来。是哪一点让你一直定不下来？',
+    opts: ['没想清楚自己喜欢的风格', '每版都有一点不满意', '还没认真比较', '都不是，我来说'], follow: {}, lesson: '',
+  },
+  week: {
+    desc: '十月二十五日 – 三十一日　在电脑前 <b>31</b> 小时　九件事情（示例）',
+    things: [['Think My Day', 14, '时', 't1', '采集层做完，复盘方法和界面在设计'], ['《抵达之后》', 7, '时', 't2', '知识库和逐镜编排，还没出图'], ['稳定币资讯', 4, '时', 't4', ''], ['刷 X', 3, '时', 't3', '']],
+    open: '这七天你在电脑前 31 小时。有一个情况反复出现：',
+    ask: '《抵达之后》这周推进了 7 小时，但每次都在「改结构」，没有进入下一步。「前一步没定、先往下做、再回头返工」，在别的事情上也出现过吗？',
+    opts: ['出现过，Think My Day 早期也是', '只在这件事上', '不确定，帮我找找', '都不是，我来说'], follow: {}, lesson: '',
+  },
+};
+ranges.custom = { ...ranges.week, desc: '十月二十五日 – 三十一日　自定义范围（示例）' };
+const thingRow = ([n, v, u, c, s]) => `<li class="row" style="--tc: var(--${c})"><div><h3>${n}</h3>${s ? `<div class="sub">${s}</div>` : ''}</div><div class="t">${v}<small>${u}</small></div></li>`;
+function renderReview(key) {
+  const r = ranges[key];
+  $('#range-desc').innerHTML = r.desc;
+  $('#custom').classList.toggle('show', key === 'custom');
+  const max = Math.max(...r.things.map(t => t[2] === '时' ? t[1] * 60 : t[1]));
+  $('#bars').innerHTML = r.things.map(([n, v, u, c]) => `<div class="bar" style="--tc: var(--${c})"><div class="l"><span>${n}</span><span>${v} ${u}</span></div><div class="track"><i style="width:${(u === '时' ? v * 60 : v) / max * 100}%"></i></div></div>`).join('');
+  $('#chat').innerHTML = `
+    <div class="say"><div class="who">复盘</div><p>${r.open}</p><ul class="rows">${r.things.map(thingRow).join('')}</ul></div>
+    <div class="say"><div class="who">复盘</div><p>先看一件事。</p>
+      <div class="ask"><q>${r.ask}</q><ol class="opts">${r.opts.map(o => `<li><button>${o}</button></li>`).join('')}</ol></div></div>`;
+  $$('#chat .opts button').forEach(b => b.onclick = () => pick(r, b));
+}
+function pick(r, b) {
+  b.closest('.opts').classList.add('used'); b.classList.add('picked');
+  const chat = $('#chat'), scroller = chat.parentElement;
+  chat.insertAdjacentHTML('beforeend', `<div class="me"><div class="who">你</div><p>${b.textContent}</p></div>`);
+  setTimeout(() => {
+    chat.insertAdjacentHTML('beforeend', `<div class="say"><div class="who">复盘</div><p>${r.follow[b.textContent] || '好，用你自己的话说说看，下面输入就行。'}</p></div>`);
+    if (r.lesson && r.follow[b.textContent]) {
+      chat.insertAdjacentHTML('beforeend', `<div class="lesson"><span class="stamp">经验</span><div><blockquote>${r.lesson}</blockquote>
+        <div class="acts"><button class="link" id="keep">记下来</button><button class="link" id="reword" style="color:var(--ink-3)">我换个说法</button></div></div></div>`);
+      $('#keep').onclick = e => { $('#lessons').insertAdjacentHTML('afterbegin', `<li class="new">${r.lesson}<small>刚刚</small></li>`); e.target.parentElement.innerHTML = '<span style="color:var(--ink-3)">已记到右边的「经验」里</span>'; };
+      $('#reword').onclick = () => $('#composer input').focus();
+    }
+    scroller.scrollTop = scroller.scrollHeight;
+  }, 500);
+  scroller.scrollTop = scroller.scrollHeight;
+}
+$$('#range button').forEach(b => b.onclick = () => { $$('#range button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderReview(b.dataset.range); });
+$('#composer').onsubmit = e => {
+  e.preventDefault(); const i = $('#composer input'); if (!i.value.trim()) return;
+  $('#chat').insertAdjacentHTML('beforeend', `<div class="me"><div class="who">你</div><p>${i.value.replace(/</g, '&lt;')}</p></div>`);
+  i.value = ''; const s = $('#chat').parentElement; s.scrollTop = s.scrollHeight;
+};
+renderReview('today');
+
+// 历史
+const week = [['日', 25], ['一', 26], ['二', 27], ['三', 28], ['四', 29], ['五', 30], ['六', 31]];
+const has = { 29: 1, 30: 1, 31: 1 };
+let day = 31, view = 'time';
+const events = [
+  { k: 'mark', tm: '20:19', h: '开启一天' },
+  { tm: '20:19', dur: '1 分', c: 't2', h: '看了一眼《抵达之后》的进度', p: 'ChatGPT 正在重建首帧和视频提示词。', meta: 'ChatGPT' },
+  { tm: '20:20', dur: '2 分', c: 't3', h: '刷 X', p: '刷首页，点开一条讲 Alexandr Wang「如何拉开差距」的帖子。', meta: 'Chrome · x.com',
+    details: [['20:20', '打开 X 首页'], ['20:21', '看了 U.Tech 的账号主页'], ['20:21', '点开 Hux 的帖子，读到「绝对聚焦」那一条'], ['20:22', '回到首页继续刷']] },
+  { tm: '20:22', dur: '8 分', c: 't1', h: 'Think My Day：问采集原理', p: '问了事件触发、NSWorkspace、锁屏、AXObserver、窗口重叠、什么时候读不到文字。', meta: 'Claude · 输入约 300 字，大部分时间在读',
+    details: [['20:23', '写：<q>所以我在做的是一个事件触发型监控</q>'], ['20:26', '写：<q>AXObserver 的订阅底层机制是什么？</q>'], ['20:28', '写：<q>前后两个窗口有重叠……是不是可以知道我在 work on 前面的窗口</q>']] },
+  { tm: '20:30', dur: '5 分', c: 't2', h: '《抵达之后》：对页面提意见，问清分镜结构', p: '觉得「逐镜编排」区域堆了太多东西，问剧情段落、镜头和场景是什么关系。', meta: 'ChatGPT · 输入约 200 字',
+    details: [['20:31', '写：<q>下一步是做什么啊？</q>'], ['20:32', '写：<q>你的这个页面的布局，我很不喜欢</q>'], ['20:34', '写：<q>逐镜编排那个区域堆了太多东西了……</q>']] },
+  { tm: '20:35', dur: '6 分', c: 't1', h: 'Think My Day：继续读原理', p: '读辅助功能、AppKit、焦点窗口的解释。', meta: 'Claude' },
+  { tm: '20:41', dur: '5 分', c: 't3', h: '在几件事之间来回切换', p: '五分钟里换了十次以上：《抵达之后》、X 的通知、Grok 的理财日报、Claude。', meta: 'ChatGPT · Chrome · Grok · Claude' },
+  { tm: '20:46', dur: '4 分', c: 't2', h: '《抵达之后》：觉得场景太少，让 AI 查知识库', p: 'AI 查了参考 MV 的地点切换，建议改成 9 处场所。', meta: 'ChatGPT' },
+  { tm: '20:50', dur: '7 分', c: 't1', h: 'Think My Day：OCR 改为按事件触发', p: '定下方案，改完代码，提交并合并进 main。', meta: 'Claude · <em>做成了一件事</em>' },
+  { k: 'gap', tm: '20:57', dur: '40 分', h: '离开电脑', p: '20:57 起没有输入，21:17 锁屏，21:37 解锁回来。这期间 ChatGPT 在后台改完了场景。' },
+  { tm: '21:37', dur: '2 分', c: 't2', h: '《抵达之后》：看新版场景，问每个镜头需要哪些图片', p: '这个问题还没有答案。', meta: 'ChatGPT' },
+  { k: 'mark', tm: '21:39', h: '结束一天' },
+];
+const byThing = [['Think My Day：采集原理与复盘设计', 45, '分', 't1', '问清采集原理，OCR 改为按事件触发并合并'], ['《抵达之后》制作编排', 13, '分', 't2', '对页面提意见，场景从 3 个改成 9 个，还没出图'], ['刷 X 与零碎切换', 7, '分', 't3', '首页、通知、一条讲「聚焦」的帖子'], ['离开', 40, '分', 'ink-4', '20:57–21:37，21:17 锁屏']];
+function renderDates() {
+  $('#dates').innerHTML = week.map(([w, d]) => `<button class="date ${has[d] ? '' : 'none'}" aria-pressed="${d === day}" data-d="${d}">周${w}<b>${d}</b><i></i></button>`).join('');
+  $$('#dates .date').forEach(b => b.onclick = () => { day = +b.dataset.d; renderDates(); renderHistory(); });
+}
+function renderHistory() {
+  const el = $('#history-body');
+  if (!has[day]) { el.innerHTML = `<div class="nothing">十月${day}日，这一天没有开启。</div>`; return; }
+  if (day !== 31) { el.innerHTML = `<div class="summary"><span>开启<b>09:48</b></span><span>结束<b>23:05</b></span><span>在电脑前<b>6:12</b></span><span>事情<b>5</b> 件</span></div><div class="nothing">示例里只有十月三十一日的详细记录。</div>`; return; }
+  const summary = `<div class="summary"><span>开启<b>20:19</b></span><span>结束<b>21:39</b></span><span>在电脑前<b>40</b> 分</span><span>离开<b>40</b> 分</span><span>事情<b>3</b> 件</span></div>`;
+  if (view === 'thing') { el.innerHTML = summary + `<div class="tl-wrap"><ul class="rows" style="max-width:760px">${byThing.map(thingRow).join('')}</ul></div>`; return; }
+  el.innerHTML = summary + `<div class="tl-wrap">${events.map((e, i) => `
+    <div class="tl ${e.k || ''}" style="--tc: var(--${e.c || 'ink-3'})">
+      <div class="tm">${e.tm}${e.dur ? `<small>${e.dur}</small>` : ''}</div><div class="rail"><i></i></div>
+      <div class="body"><h4>${e.h}</h4>${e.p ? `<p>${e.p}</p>` : ''}${e.meta ? `<div class="meta">${e.meta}</div>` : ''}
+        ${e.details ? `<button class="link more" data-i="${i}">看细节</button><ul class="details" id="d${i}">${e.details.map(([t, s]) => `<li><span>${t}</span><span>${s}</span></li>`).join('')}</ul>` : ''}
+      </div></div>`).join('')}</div>`;
+  $$('#history-body .more').forEach(b => b.onclick = () => { const d = $('#d' + b.dataset.i); d.classList.toggle('open'); b.textContent = d.classList.contains('open') ? '收起' : '看细节'; });
+}
+$$('#view button').forEach(b => b.onclick = () => { view = b.dataset.view; $$('#view button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderHistory(); });
+renderDates(); renderHistory();
+</script>
+</body>
+</html>
