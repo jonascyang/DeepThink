@@ -33,6 +33,18 @@ enum Schema {
         );
         CREATE INDEX records_day_at ON records(day_id, at);
         """,
+        // v2: what the user kept from a 复盘. Not removed with raw records.
+        """
+        CREATE TABLE review_notes (
+            id       TEXT PRIMARY KEY,
+            day_id   TEXT NOT NULL,
+            at       REAL NOT NULL,
+            kind     TEXT NOT NULL,
+            body     BLOB NOT NULL,
+            event_id INTEGER NOT NULL
+        );
+        CREATE INDEX review_notes_day ON review_notes(day_id);
+        """,
     ]
 
     static var currentVersion: Int { migrations.count }

@@ -10,13 +10,24 @@ public struct LineHistory: Sendable {
     /// Lines not present in this window's previous read, in order and without repeats; nil if nothing changed.
     /// A `partial` read stopped at its budget: lines it did not reach are kept as seen, so they are not stored
     /// again when the next read reaches them.
+    /// A short line that differs from a seen one only in its numbers counts as seen, so ticking timers and
+    /// progress text («已处理 5分钟 56秒») are stored once, not every few seconds (FR-25).
     public mutating func added(window: UInt32, lines: [String], partial: Bool = false) -> [String]? {
         let before = previous[window]
-        let current = partial ? Set(lines).union(before ?? []) : Set(lines)
+        let keys = lines.map(Self.key)
+        let current = partial ? Set(keys).union(before ?? []) : Set(keys)
         previous[window] = current
         if before == current { return nil }
         var seen = before ?? []
-        return lines.filter { seen.insert($0).inserted }
+        return zip(lines, keys).filter { seen.insert($0.1).inserted }.map(\.0)
+    }
+
+    /// Lines up to this length have their digit runs folded when compared.
+    static let tickerLength = 40
+
+    static func key(_ line: String) -> String {
+        guard line.count <= tickerLength, line.contains(where: \.isNumber) else { return line }
+        return line.replacingOccurrences(of: "[0-9０-９]+", with: "#", options: .regularExpression)
     }
 
     public mutating func forget(window: UInt32) { previous[window] = nil }

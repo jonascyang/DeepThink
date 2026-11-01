@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var chromeState: PermissionState = .unknown("检查中…")
     private let panels = PanelPresenter()
     private let timeline = TimelineWindowController()
+    private let review = ReviewWindowController()
     private var openDay: ReviewDay?
     private var lastDay: ReviewDay?
     private var statusTimer: Timer?
@@ -149,6 +150,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         timeline.show(store: store)
     }
 
+    /// 复盘 the day being recorded, or the last one.
+    @objc private func showReview() {
+        guard let store, let day = openDay ?? lastDay else { return }
+        review.show(store: store, day: day)
+    }
+
+    @objc private func showReviewModel() {
+        panels.show(title: "复盘模型") { close in ReviewModelSettingsView(close: close) }
+    }
+
     @objc private func showBlockList() {
         panels.show(title: "不看名单") { close in
             BlockListPanel(model: blockList, close: close)
@@ -234,10 +245,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                   action: #selector(showPlannedStart), keyEquivalent: "")
         planItem.target = self
         menu.addItem(planItem)
+        let reviewItem = NSMenuItem(title: "复盘…", action: #selector(showReview), keyEquivalent: "r")
+        reviewItem.target = self
+        reviewItem.isEnabled = store != nil && (openDay ?? lastDay) != nil
+        menu.addItem(reviewItem)
         let timelineItem = NSMenuItem(title: "原始时间线…", action: #selector(showTimeline), keyEquivalent: "t")
         timelineItem.target = self
         timelineItem.isEnabled = store != nil
         menu.addItem(timelineItem)
+        let modelItem = NSMenuItem(title: "复盘模型：\(Settings.reviewModelName)…", action: #selector(showReviewModel), keyEquivalent: "")
+        modelItem.target = self
+        menu.addItem(modelItem)
         let blockItem = NSMenuItem(title: "不看名单：\(blockList.summary)…", action: #selector(showBlockList), keyEquivalent: "")
         blockItem.target = self
         menu.addItem(blockItem)

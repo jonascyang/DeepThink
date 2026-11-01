@@ -41,6 +41,26 @@ enum Settings {
         Capturer.Options(ocrEnabled: ocrEnabled, idleThreshold: TimeInterval(idleMinutes * 60), blockList: blockList)
     }
 
+    // MARK: 复盘模型 (PRD §8.4). magpie on this Mac by default; no API key needed for it.
+
+    static var reviewBaseURL: String {
+        get { UserDefaults.standard.string(forKey: "reviewBaseURL") ?? "http://127.0.0.1:3425/v1" }
+        set { UserDefaults.standard.set(newValue, forKey: "reviewBaseURL") }
+    }
+
+    static var reviewModelName: String {
+        get { UserDefaults.standard.string(forKey: "reviewModelName") ?? "codex/gpt-6.1-sol" }
+        set { UserDefaults.standard.set(newValue, forKey: "reviewModelName") }
+    }
+
+    static var reviewModel: ChatModel { OpenAICompatibleModel(baseURL: reviewBaseURL, model: reviewModelName) }
+
+    /// 长期方向, in the user's words; 复盘 checks the day against it.
+    static var direction: String {
+        get { UserDefaults.standard.string(forKey: "direction") ?? "遇到难题能自己拆开、想清楚，不再逃；稳定推进手上的几条主线" }
+        set { UserDefaults.standard.set(newValue, forKey: "direction") }
+    }
+
     static var plannedStart: PlannedStart? {
         get {
             UserDefaults.standard.data(forKey: plannedStartKey).flatMap { try? JSONDecoder().decode(PlannedStart.self, from: $0) }

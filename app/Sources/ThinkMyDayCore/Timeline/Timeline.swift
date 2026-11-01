@@ -48,6 +48,9 @@ public enum Timeline {
                 let detail = [t.title, t.url, t.focused ? "焦点" : "同时可见", t.method == .ocr ? "OCR 识别" : nil,
                               t.truncated ? "只读到一部分" : nil]
                 entry(.content, t.appName, detail.compactMap(nonEmpty).joined(separator: " · "), t.added, place: t.place)
+            case .sent:
+                guard let t = try? record.decode(SentText.self) else { entry(.gap, "无法解读的记录"); continue }
+                entry(.content, "你发出 · \(t.appName)", t.title ?? "", t.text.split(whereSeparator: \.isNewline).map(String.init), place: t.place)
             case .focus:
                 guard let f = try? record.decode(Focus.self) else { entry(.gap, "无法解读的记录"); continue }
                 if let reason = f.hidden {

@@ -7,12 +7,15 @@ import ThinkMyDayCore
 //   tmd-store-stress dump <db>    one line per record: kind, app, whether it has a title and how many lines; never the text
 //   tmd-store-stress find <db> <text>  how many records contain <text>, and in which kinds; never the text itself
 //   tmd-store-stress jsonl <db>   every 复盘日 and record, decrypted, one JSON object per line on stdout (contains the text)
+//   tmd-store-stress digest <db>  the latest day with records as the 复盘 model reads it (contains the text)
+//   tmd-store-stress review <db> <base-url> <model>  sends that digest with the opening message and prints the reply
 // The key is read from <db>.key, so this never touches the Keychain (a scratch app store under $TMD_DATA_DIR uses the same file).
 // With TMD_KEYCHAIN=1 it uses the app's Keychain key instead, to check the real store; macOS asks first.
 
 let args = CommandLine.arguments
-guard args.count >= 3, ["write", "verify", "dump", "find", "jsonl"].contains(args[1]), args[1] != "find" || args.count == 4 else {
-    FileHandle.standardError.write(Data("usage: tmd-store-stress write|verify|dump|jsonl <db> | find <db> <text>\n".utf8))
+guard args.count >= 3, ["write", "verify", "dump", "find", "jsonl", "digest", "review"].contains(args[1]), args[1] != "find" || args.count == 4,
+      args[1] != "review" || args.count == 5 else {
+    FileHandle.standardError.write(Data("usage: tmd-store-stress write|verify|dump|jsonl|digest <db> | find <db> <text> | review <db> <base-url> <model>\n".utf8))
     exit(2)
 }
 let url = URL(fileURLWithPath: args[2])
@@ -59,6 +62,25 @@ case "jsonl":
                       "kind": record.kind, "body": body])
         }
     }
+case "digest", "review":
+    var latest: (ReviewDay, [Record])?
+    for day in try await store.days() {
+        let records = try await store.records(dayID: day.id)
+        if !records.isEmpty { latest = (day, records) }
+    }
+    guard let (day, records) = latest else { print("no records"); exit(1) }
+    let digest = DayDigest.make(day: day, records: records)
+    if args[1] == "digest" { print(digest); exit(0) }
+    let system = ReviewPrompt.system(direction: "遇到难题能自己拆开、想清楚，不再逃；稳定推进手上的几条主线", notes: try await store.notes(), digest: digest)
+    let started = Date()
+    let reply = try await OpenAICompatibleModel(baseURL: args[3], model: args[4]).reply(to: [ChatMessage(.system, system), ChatMessage(.user, ReviewPrompt.opening)])
+    print("[\(Int(Date().timeIntervalSince(started))) s, prompt \(system.count) chars]")
+    print(reply)
+    print("---- parsed ----")
+    let parsed = ReviewReply.parse(reply)
+    print(parsed.text)
+    for line in parsed.workList?.lines ?? [] { print("•", line.title, "|", line.status, "|", line.result, "|", line.minutes ?? -1) }
+    print("other:", parsed.workList?.other ?? "-", "options:", parsed.options)
 case "dump":
     for day in try await store.days() {
         for record in try await store.records(dayID: day.id) {

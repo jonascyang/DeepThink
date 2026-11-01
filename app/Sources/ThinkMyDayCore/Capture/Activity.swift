@@ -115,22 +115,36 @@ public struct ActivityTracker: Sendable {
     }
 }
 
-/// Turns the focused text field's length into typed, deleted and cleared counts, per window.
+/// Turns the focused text field into typed, deleted and cleared counts, per window, and hands back the text
+/// that was in the field when it was cleared, which is usually what the user sent (FR-25).
 public struct FieldTracker: Sendable {
-    private var lengths: [UInt32: Int] = [:]
+    public struct Change: Equatable, Sendable {
+        public var typed = 0
+        public var deleted = 0
+        public var cleared = 0
+        /// The field's text just before it was cleared.
+        public var sent: String?
+    }
+
+    private var texts: [UInt32: String] = [:]
 
     public init() {}
 
-    /// `length` is nil when the focus is not in a text field; the last known length is then kept.
-    public mutating func update(window: UInt32, length: Int?) -> (typed: Int, deleted: Int, cleared: Int) {
-        guard let length else { return (0, 0, 0) }
-        defer { lengths[window] = length }
-        guard let before = lengths[window] else { return (0, 0, 0) }
-        if length > before { return (length - before, 0, 0) }
+    /// `text` is nil when the focus is not in a text field; the last known text is then kept.
+    public mutating func update(window: UInt32, text: String?) -> Change {
+        guard let text else { return Change() }
+        defer { texts[window] = text }
+        guard let before = texts[window] else { return Change() }
+        let (now, was) = (text.count, before.count)
+        if now > was { return Change(typed: now - was) }
         // Cleared (usually sent): most of the text vanished at once. The field may then show a placeholder, so 0 is not required.
-        if length < before { return (0, before - length, before >= 5 && length * 5 <= before ? 1 : 0) }
-        return (0, 0, 0)
+        if now < was {
+            let cleared = was >= 5 && now * 5 <= was
+            let sent = before.trimmingCharacters(in: .whitespacesAndNewlines)
+            return Change(deleted: was - now, cleared: cleared ? 1 : 0, sent: cleared && !sent.isEmpty ? sent : nil)
+        }
+        return Change()
     }
 
-    public mutating func reset() { lengths = [:] }
+    public mutating func reset() { texts = [:] }
 }

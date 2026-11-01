@@ -10,6 +10,8 @@ public enum RecordKind: String, Sendable {
     case layout
     case activity
     case file
+    /// Text the user sent from a text field (FR-25).
+    case sent
 }
 
 /// Where a window sits: which screen (0-based, -1 off screen) and which part of it.
@@ -90,6 +92,26 @@ public struct WindowText: Codable, Sendable, Equatable {
         self.lineCount = lineCount
         self.visibleChars = visibleChars
         self.truncated = truncated
+    }
+}
+
+/// What the user wrote and sent from a text field: the field's text just before it was cleared.
+/// Unlike window text, it is certainly the user's own words.
+public struct SentText: Codable, Sendable, Equatable {
+    public var windowID: UInt32
+    public var bundleID: String
+    public var appName: String
+    public var title: String?
+    public var text: String
+    public var place: Place?
+
+    public init(windowID: UInt32, bundleID: String, appName: String, title: String?, text: String, place: Place? = nil) {
+        self.windowID = windowID
+        self.bundleID = bundleID
+        self.appName = appName
+        self.title = title
+        self.text = text
+        self.place = place
     }
 }
 

@@ -2,6 +2,8 @@
 
 正式 App，M4 记录层进行中。已有：菜单栏 App、记录库、系统授权检查、开机自动启动（#4），开启一天和结束一天（#5），读取窗口文字（#6），写入前脱敏（#9），加密存储和保留期限（#10），不看名单和永不读取（#8），多窗口和桌面布局（#7），原始时间线（#11）。M4 记录层完成。
 
+复盘第一刀（PRD v0.5 §8.3）：输入框只记发出去的内容，跳动的计时文字只存一次（FR-25）；菜单栏「复盘…」用复盘模型（默认本机 magpie）读当天记录，先列主线清单，由用户选一条复盘，收获、安排明天、今天的状态是入口，确认后才加密保存（`review_notes`）。开发时可以用 `tmd-store-stress digest|review` 看模型读到的摘要和开场。
+
 ## 目录
 
 | 路径 | 内容 |
@@ -11,7 +13,8 @@
 | `Sources/ThinkMyDayCore/Capture/` | 可见性规则、行去重、网址去参数、OCR 限频、无输入判定（纯逻辑，有测试） |
 | `Sources/ThinkMyDay/` | 菜单栏 App |
 | `Sources/ThinkMyDay/Capture/` | 读取窗口：辅助功能遍历、窗口列表、Chrome 网址、OCR、触发时机 |
-| `Sources/tmd-store-stress/` | 开发工具：给崩溃测试用的写入器 |
+| `Sources/ThinkMyDayCore/Review/` | 复盘：一天记录的摘要、提示词与回复格式、兼容 OpenAI 的模型客户端 |
+| `Sources/tmd-store-stress/` | 开发工具：给崩溃测试用的写入器；`digest`、`review` 查看复盘摘要和开场 |
 | `Tests/ThinkMyDayCoreTests/` | 记录库测试 |
 | `scripts/build-app.sh` | 构建通用二进制、签名、安装到 `~/Applications` |
 | `scripts/crash-test.sh` | 在随机时刻强杀写入进程，检查数据库是否完好 |

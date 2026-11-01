@@ -107,8 +107,8 @@ enum Files {
         return (agent, date, urls.filter { !$0.isEmpty })
     }
 
-    /// Length of the text in the focused text field of an app, or nil when the focus is elsewhere or on a password field.
-    static func focusedFieldLength(pid: pid_t) -> Int? {
+    /// Text in the focused text field of an app, or nil when the focus is elsewhere or on a password field.
+    static func focusedFieldText(pid: pid_t) -> String? {
         let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 0.2)
         guard let raw = AX.attr(app, kAXFocusedUIElementAttribute), CFGetTypeID(raw) == AXUIElementGetTypeID() else { return nil }
@@ -116,8 +116,7 @@ enum Files {
         let role = AX.attr(el, kAXRoleAttribute) as? String ?? ""
         let subrole = AX.attr(el, kAXSubroleAttribute) as? String ?? ""
         guard ["AXTextArea", "AXTextField", "AXComboBox", "AXSearchField"].contains(role), subrole != kAXSecureTextFieldSubrole else { return nil }
-        if let count = AX.attr(el, kAXNumberOfCharactersAttribute) as? Int { return count }
-        return (AX.attr(el, kAXValueAttribute) as? String)?.count
+        return (AX.attr(el, kAXValueAttribute) as? String) ?? ""
     }
 }
 

@@ -96,7 +96,7 @@ public actor RecordStore {
     /// Drops the projections and rebuilds them from the event log.
     public func rebuildProjections() throws {
         try db.transaction {
-            try db.execute("DELETE FROM records; DELETE FROM review_days; DELETE FROM cursors")
+            try db.execute("DELETE FROM records; DELETE FROM review_notes; DELETE FROM review_days; DELETE FROM cursors")
         }
         try Self.catchUp(db, cipher)
     }
@@ -125,6 +125,7 @@ public actor RecordStore {
             try db.run("DELETE FROM records WHERE day_id = ?", [.text(dayID.uuidString)])
             if entireDay {
                 try db.run("DELETE FROM review_days WHERE id = ?", [.text(dayID.uuidString)])
+                try db.run("DELETE FROM review_notes WHERE day_id = ?", [.text(dayID.uuidString)])
                 try db.run("DELETE FROM events WHERE day_id = ?", [.text(dayID.uuidString)])
             } else {
                 try db.run("DELETE FROM events WHERE day_id = ? AND kind = 'recordCaptured'", [.text(dayID.uuidString)])
@@ -164,6 +165,15 @@ public actor RecordStore {
             }
     }
 
+    /// Notes kept from 复盘, oldest first; only those about `dayID` when given, only of `kind` when given.
+    public func notes(dayID: UUID? = nil, kind: ReviewNote.Kind? = nil) throws -> [ReviewNote] {
+        var sql = "SELECT body FROM review_notes WHERE 1 = 1"
+        var args: [SQLValue] = []
+        if let dayID { sql += " AND day_id = ?"; args.append(.text(dayID.uuidString)) }
+        if let kind { sql += " AND kind = ?"; args.append(.text(kind.rawValue)) }
+        return try db.query(sql + " ORDER BY at, rowid", args).map { try Event.decoder.decode(ReviewNote.self, from: try cipher.open($0[0].blob ?? Data())) }
+    }
+
     public func eventCount() throws -> Int {
         Int(try db.query("SELECT count(*) FROM events").first?.first?.int ?? 0)
     }
@@ -189,6 +199,10 @@ public actor RecordStore {
     private func insert(_ event: Event) throws -> Int64 {
         var event = event
         if case .recordCaptured(let record) = event { event = .recordCaptured(try record.redacted()) }
+        if case .reviewNoted(var note) = event {
+            note.text = Redactor.redact(note.text)
+            event = .reviewNoted(note)
+        }
         try db.run("INSERT INTO events (at, day_id, kind, payload) VALUES (?, ?, ?, ?)",
                    [.double(event.at.timeIntervalSince1970), .text(event.dayID.uuidString), .text(event.kind), .blob(try cipher.seal(try event.payload()))])
         let id = db.lastInsertRowID
@@ -243,6 +257,14 @@ public actor RecordStore {
             try db.run("INSERT INTO records (id, day_id, at, kind, body, event_id) VALUES (?, ?, ?, ?, ?, ?)",
                        [.text(r.id.uuidString), .text(r.dayID.uuidString), .double(r.at.timeIntervalSince1970),
                         .text(r.kind), .blob(try cipher.seal(r.body)), .int(id)])
+        case .reviewNoted(let n):
+            // A 复盘 can happen after the day has ended, so unlike records the day only has to exist.
+            guard try !db.query("SELECT 1 FROM review_days WHERE id = ?", [.text(n.dayID.uuidString)]).isEmpty else {
+                throw StoreError.dayNotFound(n.dayID)
+            }
+            try db.run("INSERT INTO review_notes (id, day_id, at, kind, body, event_id) VALUES (?, ?, ?, ?, ?, ?)",
+                       [.text(n.id.uuidString), .text(n.dayID.uuidString), .double(n.at.timeIntervalSince1970),
+                        .text(n.kind.rawValue), .blob(try cipher.seal(try Event.encoder.encode(n))), .int(id)])
         }
     }
 

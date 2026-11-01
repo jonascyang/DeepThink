@@ -106,12 +106,12 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
 
         let v2 = Schema.migrations + ["ALTER TABLE review_days ADD COLUMN note TEXT"]
         try Schema.migrate(db, migrations: v2)
-        #expect(try db.query("PRAGMA user_version").first?.first?.int == 2)
+        #expect(try db.query("PRAGMA user_version").first?.first?.int == Int64(v2.count))
         #expect(try db.query("SELECT id, note FROM review_days") == [[.text("x"), .null]])
 
         // Running again is a no-op.
         try Schema.migrate(db, migrations: v2)
-        #expect(try db.query("PRAGMA user_version").first?.first?.int == 2)
+        #expect(try db.query("PRAGMA user_version").first?.first?.int == Int64(v2.count))
     }
 
     @Test func refusesNewerDatabase() async throws {
@@ -129,5 +129,40 @@ private func record(_ day: ReviewDay, _ seconds: Double, _ text: String = "hello
         try Schema.migrate(db)
         #expect(throws: SQLiteError.self) { try Schema.migrate(db, migrations: Schema.migrations + ["CREATE TABLE bad (; nonsense"]) }
         #expect(try db.query("PRAGMA user_version").first?.first?.int == Int64(Schema.currentVersion))
+    }
+}
+
+@Suite struct ReviewNoteTests {
+    let day = ReviewDay(startedAt: Date(timeIntervalSince1970: 1_793_400_000))
+
+    @Test func notesOutliveRawRecordsAndFollowTheDay() async throws {
+        let store = try RecordStore(url: tempURL(), keys: testKeys)
+        try await store.append(.dayStarted(day))
+        let later = day.startedAt.addingTimeInterval(7200)
+        try await store.append(.dayEnded(dayID: day.id, at: later))
+        let lesson = ReviewNote(dayID: day.id, at: later.addingTimeInterval(60), kind: .lesson, text: "不熟悉的事，先问流程")
+        let first = ReviewNote(dayID: day.id, at: later.addingTimeInterval(61), kind: .tomorrow, text: "问一个镜头的标准流程", rank: 1)
+        try await store.append([.reviewNoted(lesson), .reviewNoted(first)])
+        #expect(try await store.notes(dayID: day.id) == [lesson, first])
+        #expect(try await store.notes(kind: .tomorrow) == [first])
+
+        _ = try await store.purgeRecords(before: later.addingTimeInterval(86_400))
+        #expect(try await store.notes(dayID: day.id).count == 2)
+        try await store.rebuildProjections()
+        #expect(try await store.notes(dayID: day.id).count == 2)
+
+        try await store.deleteDay(day.id, entireDay: true)
+        #expect(try await store.notes().isEmpty)
+    }
+
+    @Test func notesNeedAnExistingDayAndAreRedacted() async throws {
+        let store = try RecordStore(url: tempURL(), keys: testKeys)
+        await #expect(throws: StoreError.dayNotFound(day.id)) {
+            try await store.append(.reviewNoted(ReviewNote(dayID: day.id, at: day.startedAt, kind: .mood, text: "累")))
+        }
+        try await store.append(.dayStarted(day))
+        let jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        try await store.append(.reviewNoted(ReviewNote(dayID: day.id, at: day.startedAt, kind: .lesson, text: "密钥是 \(jwt)")))
+        #expect(try await store.notes().first?.text.contains(jwt) == false)
     }
 }

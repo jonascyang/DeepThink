@@ -30,15 +30,21 @@ public struct ElementSnapshot: Sendable {
     public var isSecure: Bool { role == "AXSecureTextField" || subrole == "AXSecureTextField" }
 
     /// Length of the text field that has keyboard focus inside this tree, if any. Used for typing counts (#14).
-    public var focusedFieldLength: Int? {
+    public var focusedFieldLength: Int? { focusedFieldText.map(\.count) }
+
+    /// Text of the text field that has keyboard focus inside this tree, "" when it is empty; nil when no field has focus.
+    public var focusedFieldText: String? {
         var stack = [self]
         while let el = stack.popLast() {
             if el.isSecure { continue }
-            if el.focused, VisibleText.editableRoles.contains(el.role) || el.role == "AXSearchField" { return el.value?.count ?? 0 }
+            if el.isFocusedField { return el.value ?? "" }
             stack.append(contentsOf: el.children)
         }
         return nil
     }
+
+    /// An editable field with keyboard focus: what the user is typing right now.
+    var isFocusedField: Bool { focused && (VisibleText.editableRoles.contains(role) || role == "AXSearchField") }
 }
 
 public struct ExtractedText: Sendable, Equatable {
@@ -89,9 +95,13 @@ public enum VisibleText {
                 } else {
                     out.visibleChars += count
                 }
-                for line in text.split(whereSeparator: \.isNewline) {
-                    let t = line.trimmingCharacters(in: .whitespaces)
-                    if !t.isEmpty { out.lines.append(t) }
+                // The field being typed in changes with every key and holds unconverted IME input; its text is
+                // recorded once, when it is sent (FR-25). It still counts as visible text.
+                if !el.isFocusedField {
+                    for line in text.split(whereSeparator: \.isNewline) {
+                        let t = line.trimmingCharacters(in: .whitespaces)
+                        if !t.isEmpty { out.lines.append(t) }
+                    }
                 }
             }
             stack.append(contentsOf: el.children.reversed().map { ($0, childClip) })

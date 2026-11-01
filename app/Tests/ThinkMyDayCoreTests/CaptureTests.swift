@@ -289,17 +289,29 @@ private final class TrackerBox {
         #expect(tracker.add([sample(1)], 60, t0.addingTimeInterval(60)).isEmpty)
     }
 
-    @Test func fieldLengthBecomesTypedDeletedCleared() {
+    @Test func fieldTextBecomesTypedDeletedClearedAndSent() {
         var f = FieldTracker()
-        do { let r = f.update(window: 1, length: 0); #expect(r == (0, 0, 0)) }
-        do { let r = f.update(window: 1, length: 12); #expect(r == (12, 0, 0)) }
-        do { let r = f.update(window: 1, length: 9); #expect(r == (0, 3, 0)) }
-        do { let r = f.update(window: 1, length: nil); #expect(r == (0, 0, 0)) }
-        do { let r = f.update(window: 1, length: 0); #expect(r == (0, 9, 1)) }
+        typealias C = FieldTracker.Change
+        let long = String(repeating: "长", count: 40)
+        do { let r = f.update(window: 1, text: ""); #expect(r == C()) }
+        do { let r = f.update(window: 1, text: "你好，帮我看看这个页面"); #expect(r == C(typed: 11)) }
+        do { let r = f.update(window: 1, text: "你好，帮我看看这个"); #expect(r == C(deleted: 2)) }
+        do { let r = f.update(window: 1, text: nil); #expect(r == C()) }
+        do { let r = f.update(window: 1, text: ""); #expect(r == C(deleted: 9, cleared: 1, sent: "你好，帮我看看这个")) }
         // Sent, then the field shows its placeholder instead of nothing.
-        do { let r = f.update(window: 1, length: 40); #expect(r == (40, 0, 0)) }
-        do { let r = f.update(window: 1, length: 6); #expect(r == (0, 34, 1)) }
-        do { let r = f.update(window: 1, length: 3); #expect(r == (0, 3, 0)) }
+        do { let r = f.update(window: 1, text: long); #expect(r == C(typed: 40)) }
+        do { let r = f.update(window: 1, text: "输入消息…"); #expect(r == C(deleted: 35, cleared: 1, sent: long)) }
+        do { let r = f.update(window: 1, text: "输入"); #expect(r == C(deleted: 3)) }
+    }
+
+    @Test func tickingNumbersAreStoredOnce() {
+        var history = LineHistory()
+        do { let r = history.added(window: 1, lines: ["已处理 5分钟 56秒", "第三节：储备资产"]); #expect(r == ["已处理 5分钟 56秒", "第三节：储备资产"]) }
+        do { let r = history.added(window: 1, lines: ["已处理 5分钟 58秒", "第三节：储备资产"]); #expect(r == nil) }
+        do { let r = history.added(window: 1, lines: ["已处理 6分钟 3秒", "回复已完成"]); #expect(r == ["回复已完成"]) }
+        let longLine = "这是一段很长的正文，里面提到 2026 年 10 月 31 日的一次复盘，以及一些别的内容，用来超过长度上限"
+        _ = history.added(window: 2, lines: [longLine])
+        do { let r = history.added(window: 2, lines: [longLine.replacingOccurrences(of: "31", with: "30")]); #expect(r?.count == 1) }
     }
 
     @Test func filesAreRecordedWhenTheyAppear() {
@@ -324,7 +336,17 @@ private final class ActivityBox {
             ElementSnapshot(role: "AXGroup", children: [field]),
         ])
         #expect(tree.focusedFieldLength == 7)
+        #expect(tree.focusedFieldText == "你好，帮我看看")
         #expect(ElementSnapshot(role: "AXWindow", children: [ElementSnapshot(role: "AXTextArea", value: "x")]).focusedFieldLength == nil)
+    }
+
+    @Test func theFieldBeingTypedInIsNotWindowText() {
+        var field = ElementSnapshot(role: "AXTextArea", value: "zhu jing", frame: CGRect(x: 0, y: 700, width: 600, height: 40))
+        field.focused = true
+        let unfocused = ElementSnapshot(role: "AXTextArea", value: "草稿：稍后再发", frame: CGRect(x: 0, y: 600, width: 600, height: 40))
+        let out = VisibleText.extract(group([text("回复已完成"), unfocused, field]), windowFrame: window)
+        #expect(out.lines == ["回复已完成", "草稿：稍后再发"])
+        #expect(out.visibleChars > "回复已完成草稿：稍后再发".count)
     }
 
     @Test func passwordFieldsDoNotCount() {

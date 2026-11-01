@@ -289,9 +289,13 @@ final class Capturer: @unchecked Sendable {
             let text = VisibleText.extract(read.root, windowFrame: w.bounds)
             if isFocused {
                 // The app's focused element first; Chromium apps often only mark the field AXFocused inside the tree.
-                let length = Files.focusedFieldLength(pid: w.pid) ?? read.root.focusedFieldLength
-                if length == nil { log.debug("no focused text field found in \(bundleID, privacy: .public)") }
-                (sample.typed, sample.deleted, sample.cleared) = fields.update(window: w.id, length: length)
+                let field = Files.focusedFieldText(pid: w.pid) ?? read.root.focusedFieldText
+                if field == nil { log.debug("no focused text field found in \(bundleID, privacy: .public)") }
+                let change = fields.update(window: w.id, text: field)
+                (sample.typed, sample.deleted, sample.cleared) = (change.typed, change.deleted, change.cleared)
+                if let sent = change.sent {
+                    write(.sent, SentText(windowID: w.id, bundleID: bundleID, appName: appName, title: title, text: sent, place: windowPlace))
+                }
             }
             log.debug("read \(bundleID, privacy: .public): \(read.nodes) nodes, \(read.ms, format: .fixed(precision: 0)) ms, truncated \(read.truncated), \(text.visibleChars) visible")
             var body = WindowText(windowID: w.id, bundleID: bundleID, appName: appName, title: title,
